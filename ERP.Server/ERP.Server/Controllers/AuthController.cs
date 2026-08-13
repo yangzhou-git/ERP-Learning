@@ -19,11 +19,10 @@ namespace ERP.Server.Controllers
 
         #region 登陆接口Login
         [HttpPost]
-        public async Task<ApiResponse<LoginResponse>> Login(LoginRequest Request)
+        public async Task<ApiResponse<LoginResponse>> Login(LoginRequest request)
         {
-            var Result = await _userService.LoginAsync(Request);
-            return Result;
+            return await _userService.LoginAsync(request);
         }
-    }
         #endregion
+    }
 }

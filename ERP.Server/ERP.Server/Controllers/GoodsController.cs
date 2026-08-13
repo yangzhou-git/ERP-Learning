@@ -10,43 +10,39 @@ namespace ERP.Server.Controllers
     [Route("api/[controller]/[action]")]
     public class GoodsController : ControllerBase
     {
-        private readonly IGoodsService _GoodsService;
+        private readonly IGoodsService _goodsService;
 
-        public GoodsController(IGoodsService GoodsService)
+        public GoodsController(IGoodsService goodsService)
         {
-            _GoodsService = GoodsService;
+            _goodsService = goodsService;
         }
 
         #region 新增商品AddGoods
         [HttpPost]
-        public async Task<ApiResponse<bool>> AddGoods([FromBody]AddGoodsRequest Request)
+        public async Task<ApiResponse<bool>> AddGoods(AddGoodsRequest request)
         {
-            var Result = await _GoodsService.AddGoodsAsync(Request);
-            return Result;
+            return await _goodsService.AddGoodsAsync(request);
         }
         #endregion
         #region 获取商品列表GetGoodsList
         [HttpGet]
-        public async Task<ApiResponse<PageResponse<GoodsListResponse>>> GetGoodsList([FromQuery] GetGoodsListRequest Request)
+        public async Task<ApiResponse<PageResponse<GoodsListResponse>>> GetGoodsList([FromQuery] GetGoodsListRequest request)
         {
-            var Result = await _GoodsService.GetGoodsListAsync(Request);
-            return Result;
+            return await _goodsService.GetGoodsListAsync(request);
         }
         #endregion
         #region 修改商品状态UpdateGoodsStatus
         [HttpPost]
         public async Task<ApiResponse<bool>> UpdateGoodsStatus(UpdateGoodsStatusRequest request)
         {
-            var Result = await _GoodsService.UpdateGoodsStatusAsync(request);
-            return Result;
+            return await _goodsService.UpdateGoodsStatusAsync(request);
         }
         #endregion
-        #region 修改商品资料UpdateGoodsAsync
+        #region 修改商品资料UpdateGoods
         [HttpPost]
         public async Task<ApiResponse<bool>> UpdateGoods(UpdateGoodsRequest request)
         {
-            var result = await _GoodsService.UpdateGoodsAsync(request);
-            return result;
+            return await _goodsService.UpdateGoodsAsync(request);
         }
         #endregion
     }

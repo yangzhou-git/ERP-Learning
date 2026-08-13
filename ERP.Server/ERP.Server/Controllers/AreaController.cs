@@ -18,9 +18,9 @@ namespace ERP.Server.Controllers
 
         #region 查询地区树（懒加载）GetAreaTree
         [HttpGet]
-        public async Task<ApiResponse<List<AreaTreeResponse>>> GetAreaTree(int? ParentID)
+        public async Task<ApiResponse<List<AreaTreeResponse>>> GetAreaTree(int? parentID)
         {
-            return await _areaService.GetAreaTreeAsync(ParentID);
+            return await _areaService.GetAreaTreeAsync(parentID);
         }
         #endregion
     }

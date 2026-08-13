@@ -4,10 +4,13 @@ using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var corsOrigins = builder.Configuration
+    .GetSection("Cors:Origins")
+    .Get<string[]>();
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<IDbConnection>(x =>
+builder.Services.AddScoped<IDbConnection>(_ =>
 {
     return new SqlConnection(
         builder.Configuration.GetConnectionString("DefaultConnection")
@@ -19,7 +22,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("VueCors", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(corsOrigins ?? [])
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

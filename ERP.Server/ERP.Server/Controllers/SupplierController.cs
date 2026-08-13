@@ -24,9 +24,9 @@ namespace ERP.Server.Controllers
             return await _supplierService.AddSupplierAsync(request);
         }
         #endregion
-        #region 查询供应商列表
+        #region 查询供应商列表GetSupplierList
         [HttpGet]
-        public async Task<ApiResponse<PageResponse<SupplierListResponse>>> GetSupplierList([FromQuery]GetSupplierListRequest request)
+        public async Task<ApiResponse<PageResponse<SupplierListResponse>>> GetSupplierList([FromQuery] GetSupplierListRequest request)
         {
             return await _supplierService.GetSupplierListAsync(request);
         }

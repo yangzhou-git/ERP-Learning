@@ -7,28 +7,30 @@ namespace ERP.Server.Extensions
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddRepositories(this IServiceCollection Services)
+        public static IServiceCollection AddRepositories(this IServiceCollection services)
         {
-            Services.AddScoped<IUserRepository, UserRepository>();
-            Services.AddScoped<ICompanyRepository, CompanyRepository>();
-            Services.AddScoped<IGoodsRepository, GoodsRepository>();
-            Services.AddScoped<IGoodsCategoryRepository, GoodsCategoryRepository>();
-            Services.AddScoped<ISupplierRepository, SupplierRepository>();
-            Services.AddScoped<ILocationRepository, LocationRepository>();
-            Services.AddScoped<IAreaRepository, AreaRepository>();
-            return Services;
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ICompanyRepository, CompanyRepository>();
+            services.AddScoped<IGoodsRepository, GoodsRepository>();
+            services.AddScoped<IGoodsCategoryRepository, GoodsCategoryRepository>();
+            services.AddScoped<ISupplierRepository, SupplierRepository>();
+            services.AddScoped<ILocationRepository, LocationRepository>();
+            services.AddScoped<IAreaRepository, AreaRepository>();
+
+            return services;
         }
 
-        public static IServiceCollection AddServices(this IServiceCollection Services)
+        public static IServiceCollection AddServices(this IServiceCollection services)
         {
-            Services.AddScoped<IUserService, UserService>();
-            Services.AddScoped<ICompanyService, CompanyService>();
-            Services.AddScoped<IGoodsService, GoodsService>();
-            Services.AddScoped<IGoodsCategoryService, GoodsCategoryService>();
-            Services.AddScoped<ISupplierService, SupplierService>();
-            Services.AddScoped<ILocationService, LocationService>();
-            Services.AddScoped<IAreaService, AreaService>();
-            return Services;
+            services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICompanyService, CompanyService>();
+            services.AddScoped<IGoodsService, GoodsService>();
+            services.AddScoped<IGoodsCategoryService, GoodsCategoryService>();
+            services.AddScoped<ISupplierService, SupplierService>();
+            services.AddScoped<ILocationService, LocationService>();
+            services.AddScoped<IAreaService, AreaService>();
+
+            return services;
         }
     }
 }

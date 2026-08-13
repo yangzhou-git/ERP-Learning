@@ -1,8 +1,8 @@
 ﻿using ERP.Server.Common;
-using Microsoft.AspNetCore.Mvc;
-using ERP.Server.Services.Interfaces;
-using ERP.Server.Models.Response;
 using ERP.Server.Models.Request;
+using ERP.Server.Models.Response;
+using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace ERP.Server.Controllers
 {
@@ -19,13 +19,12 @@ namespace ERP.Server.Controllers
 
         #region 获取员工列表GetUserList
         [HttpGet]
-        public async Task<ApiResponse<PageResponse<UserResponse>>> GetUserList([FromQuery] GetUserListRequest Request)
+        public async Task<ApiResponse<PageResponse<UserResponse>>> GetUserList([FromQuery] GetUserListRequest request)
         {
-            var Result = await _userService.GetUserListAsync(Request);
-            return Result;
+            return await _userService.GetUserListAsync(request);
         }
         #endregion
-        #region 新增员工 AddUser
+        #region 新增员工AddUser
         [HttpPost]
         public async Task<ApiResponse<bool>> AddUser(AddUserRequest request)
         {
@@ -41,9 +40,9 @@ namespace ERP.Server.Controllers
         #endregion
         #region 修改员工状态UpdateUserStatus
         [HttpPost]
-        public async Task<ApiResponse<bool>> UpdateUserStatus(UpdateUserStatusRequest Request)
+        public async Task<ApiResponse<bool>> UpdateUserStatus(UpdateUserStatusRequest request)
         {
-            return await _userService.UpdateUserStatusAsync(Request);
+            return await _userService.UpdateUserStatusAsync(request);
         }
         #endregion
     }
