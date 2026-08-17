@@ -3,8 +3,8 @@
     public class Goods
     {
         public int GoodsID { get; set; }//商品ID
-        public string? BarCode { get; set; }//商品条码
-        public string? GoodsCode { get; set; }//商家/系统商品编码
+        public string BarCode { get; set; } = string.Empty;//商品条码
+        public string GoodsCode { get; set; } = string.Empty;//商家/系统商品编码
         public int CategoryID { get; set; }//分类ID
         public string GoodsTitle { get; set; } = string.Empty;//商品名称/书名
         public string? GoodsSubTitle { get; set; }//商品副名

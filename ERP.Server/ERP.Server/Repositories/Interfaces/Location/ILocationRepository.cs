@@ -1,7 +1,5 @@
-﻿using ERP.Server.Common;
-using ERP.Server.Models.Entity;
+﻿using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
-using ERP.Server.Models.Response;
 
 namespace ERP.Server.Repositories.Interfaces
 {
@@ -19,8 +17,11 @@ namespace ERP.Server.Repositories.Interfaces
         #region 根据站点ID查询GetLocationByIdAsync
         Task<Location?> GetLocationByIdAsync(int LocationID);
         #endregion
+        #region 查询站点父级链GetLocationParentTreeAsync
+        Task<List<Location>> GetLocationParentTreeAsync(int LocationID);
+        #endregion
         #region 查询站点树GetLocationTreeAsync
-        Task<List<Location>> GetLocationTreeAsync();
+        Task<List<Location>> GetLocationTreeAsync(int CompanyID);
         #endregion
         #region 新增站点AddLocationAsync
         Task<bool> AddLocationAsync(Location location);

@@ -14,81 +14,110 @@ namespace ERP.Server.Repositories.Implementations
         {
             _connection = connection;
         }
-        #region 登陆根据用户名获取用户信息
-        public async Task<User?> GetUserByUserNameAsync(string UserName)
+
+        #region 登录根据用户名获取用户信息GetUserByUserNameAsync
+        public async Task<User?> GetUserByUserNameAsync(string userName)
         {
-            var Sql = @"select * from Users where UserName =@UserName";
-            var User = await _connection.QueryFirstOrDefaultAsync<User>(Sql,new
-                {
-                    UserName = UserName
-                });
-            return User;
+            var sql = @"select *
+                        from Users
+                        where UserName = @UserName";
+
+            var user = await _connection.QueryFirstOrDefaultAsync<User>(sql, new
+            {
+                UserName = userName
+            });
+
+            return user;
         }
         #endregion
 
         #region 获取员工总数量GetUserCountAsync
-        public async Task<int> GetUserCountAsync(GetUserListRequest Request)
+        public async Task<int> GetUserCountAsync(GetUserListRequest request)
         {
-           var Sql = @"select count(1) from Users where(@UserName IS NULL 
-                                                        OR @UserName = ''
-                                                        OR UserName LIKE '%' + @UserName + '%'
-                                                        )";
-            var UserCount = await _connection.ExecuteScalarAsync<int>(Sql, new
+            var sql = @"select count(1)
+                        from Users
+                        where (@UserName is null
+                               or @UserName = ''
+                               or UserName like '%' + @UserName + '%')";
+
+            var userCount = await _connection.ExecuteScalarAsync<int>(sql, new
             {
-                UserName = Request.UserName
+                UserName = request.UserName
             });
-            return UserCount;
+
+            return userCount;
         }
         #endregion
 
         #region 获取员工列表GetUserListAsync
-        public async Task<List<User>> GetUserListAsync(GetUserListRequest Request)
+        public async Task<List<User>> GetUserListAsync(GetUserListRequest request)
         {
-            int Skip = (Request.Page - 1) * Request.PageSize;
-            string Sql = @"SELECT * FROM Users WHERE(@UserName IS NULL
-                                                     OR @UserName = ''
-                                                     OR UserName LIKE '%' + @UserName + '%'
-                                                    )
-                                                    ORDER BY UserID
-                                                    OFFSET @Skip ROWS
-                                                    FETCH NEXT @PageSize ROWS ONLY ";
-            var UserList = await _connection.QueryAsync<User>(Sql, new
+            var skip = (request.Page - 1) * request.PageSize;
+
+            var sql = @"select *
+                        from Users
+                        where (@UserName is null
+                               or @UserName = ''
+                               or UserName like '%' + @UserName + '%')
+                        order by UserID
+                        offset @Skip rows
+                        fetch next @PageSize rows only";
+
+            var userList = await _connection.QueryAsync<User>(sql, new
             {
-                UserName = Request.UserName,
-                Skip = Skip,
-                PageSize = Request.PageSize
+                UserName = request.UserName,
+                Skip = skip,
+                PageSize = request.PageSize
             });
-            return UserList.ToList();
+
+            return userList.ToList();
         }
         #endregion
+
         #region 新增员工AddUserAsync
         public async Task<bool> AddUserAsync(User user)
         {
-            var Sql = @"insert into Users(UserName,Password,Email,Phone,CompanyID,IsActive,CreateTime) values(@UserName,@Password,@Email,@Phone,@CompanyID,@IsActive,GETDATE())";
-            var Result = await _connection.ExecuteAsync(Sql, user);
-            return Result > 0;
+            var sql = @"insert into Users(UserName,Password,Email,Phone,CompanyID,IsActive,CreateTime)
+                        values(@UserName,@Password,@Email,@Phone,@CompanyID,@IsActive,getdate())";
+
+            var result = await _connection.ExecuteAsync(sql, user);
+
+            return result > 0;
         }
         #endregion
 
         #region 修改员工资料UpdateUserAsync
         public async Task<bool> UpdateUserAsync(User user)
         {
-            var Sql = @"update Users set UserName = @UserName, Phone=@Phone, Email=@Email, CompanyID=@CompanyID, UpdateTime=GETDATE() where UserID=@UserID";
-            var Result = await _connection.ExecuteAsync(Sql, user);
-            return Result > 0;
+            var sql = @"update Users
+                        set UserName = @UserName,
+                            Phone = @Phone,
+                            Email = @Email,
+                            CompanyID = @CompanyID,
+                            UpdateTime = getdate()
+                        where UserID = @UserID";
+
+            var result = await _connection.ExecuteAsync(sql, user);
+
+            return result > 0;
         }
         #endregion
 
         #region 修改员工状态UpdateUserStatusAsync
-        public async Task<bool> UpdateUserStatusAsync(int UserID, bool IsActive)
+        public async Task<bool> UpdateUserStatusAsync(int userID, bool isActive)
         {
-            var Sql = @"update Users set IsActive = @IsActive where UserID = @UserID";
-            var Result = await _connection.ExecuteAsync(Sql, new
+            var sql = @"update Users
+                        set IsActive = @IsActive,
+                            UpdateTime = getdate()
+                        where UserID = @UserID";
+
+            var result = await _connection.ExecuteAsync(sql, new
             {
-                UserID = UserID,
-                IsActive = IsActive
+                UserID = userID,
+                IsActive = isActive
             });
-            return Result > 0;
+
+            return result > 0;
         }
         #endregion
     }

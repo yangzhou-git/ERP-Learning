@@ -1,5 +1,4 @@
 ﻿using ERP.Server.Common;
-using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
 
@@ -11,7 +10,7 @@ namespace ERP.Server.Services.Interfaces
         Task<ApiResponse<PageResponse<LocationResponse>>> GetLocationListAsync(GetLocationListRequest request);
         #endregion
         #region 查询站点树GetLocationTreeAsync
-        Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTreeAsync();
+        Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTreeAsync(int CompanyID);
         #endregion
         #region 新增站点AddLocationAsync
         Task<ApiResponse<bool>> AddLocationAsync(AddLocationRequest request);

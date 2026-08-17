@@ -1,69 +1,90 @@
 ﻿using ERP.Server.Common;
-using ERP.Server.Models.Request;
-using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Models.Entity;
-using ERP.Server.Services.Interfaces;
+using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
+using ERP.Server.Repositories.Interfaces;
+using ERP.Server.Services.Interfaces;
 
 namespace ERP.Server.Services.Implementations
 {
     public class GoodsService : IGoodsService
     {
-        private readonly IGoodsRepository _GoodsRepository;
+        private readonly IGoodsRepository _goodsRepository;
 
-        public GoodsService(IGoodsRepository GoodsRepository)
+        public GoodsService(IGoodsRepository goodsRepository)
         {
-            _GoodsRepository = GoodsRepository;
+            _goodsRepository = goodsRepository;
         }
+
         #region 新增商品AddGoodsAsync
-        public async Task<ApiResponse<bool>> AddGoodsAsync(AddGoodsRequest Request)
+        public async Task<ApiResponse<bool>> AddGoodsAsync(AddGoodsRequest request)
         {
-            var Goods = new Goods
+            var existingGoodsCode = await _goodsRepository.GetGoodsByCodeAsync(request.GoodsCode);
+            if (existingGoodsCode != null)
             {
-                BarCode = Request.BarCode,
-                GoodsCode = Request.GoodsCode,
-                CategoryID = Request.CategoryID,
-                GoodsTitle = Request.GoodsTitle,
-                GoodsSubTitle = Request.GoodsSubTitle,
-                GoodsPrice = Request.GoodsPrice,
-                IsActive = true,
-                Unit = Request.Unit,
-            };
-            var Result = await _GoodsRepository.AddGoodsAsync(Goods);
-            if (Result)
-            {
-                return ApiResponse<bool>.Success(true, "新增成功");
+                return ApiResponse<bool>.Error($"商品编码【{request.GoodsCode}】已存在");
             }
-            return ApiResponse<bool>.Error("新增失败");
+            var existingBarCode = await _goodsRepository.GetGoodsByBarCodeAsync(request.BarCode);
+            if (existingBarCode != null)
+            {
+                return ApiResponse<bool>.Error($"商品条码【{request.BarCode}】已存在");
+            }
+            var goods = new Goods
+            {
+                BarCode = request.BarCode,
+                GoodsCode = request.GoodsCode,
+                CategoryID = request.CategoryID,
+                GoodsTitle = request.GoodsTitle,
+                GoodsSubTitle = request.GoodsSubTitle,
+                GoodsPrice = request.GoodsPrice,
+                Unit = request.Unit,
+                IsActive = true
+            };
+            var result = await _goodsRepository.AddGoodsAsync(goods);
+            if (result)
+            {
+                return ApiResponse<bool>.Success(true, "新增商品成功");
+            }
+            return ApiResponse<bool>.Error("新增商品失败");
         }
         #endregion
         #region 获取商品列表GetGoodsListAsync
-        public async Task<ApiResponse<PageResponse<GoodsListResponse>>> GetGoodsListAsync(GetGoodsListRequest Request)
+        public async Task<ApiResponse<PageResponse<GoodsListResponse>>> GetGoodsListAsync(GetGoodsListRequest request)
         {
-            var GoodsList = await _GoodsRepository.GetGoodsListAsync(Request);
-            var GoodsCount = await _GoodsRepository.GetGoodsCountAsync(Request);
-            var Result = new PageResponse<GoodsListResponse>()
+            var goodsList = await _goodsRepository.GetGoodsListAsync(request);
+            var goodsCount = await _goodsRepository.GetGoodsCountAsync(request);
+            var pageData = new PageResponse<GoodsListResponse>
             {
-                TotalCount = GoodsCount,
-                List = GoodsList
+                TotalCount = goodsCount,
+                List = goodsList
             };
-            return ApiResponse<PageResponse<GoodsListResponse>>.Success(Result, "查询商品列表成功");
+            return ApiResponse<PageResponse<GoodsListResponse>>.Success(pageData,"查询商品列表成功");
         }
         #endregion
-        #region 修改商品状态UpdateGoodsAsync
-        public async Task<ApiResponse<bool>> UpdateGoodsStatusAsync(UpdateGoodsStatusRequest Request)
+        #region 修改商品状态UpdateGoodsStatusAsync
+        public async Task<ApiResponse<bool>> UpdateGoodsStatusAsync(UpdateGoodsStatusRequest request)
         {
-            var GoodsStatus = await _GoodsRepository.UpdateGoodsStatusAsync(Request.GoodsID,Request.IsActive);
-            if(GoodsStatus)
+            var result = await _goodsRepository.UpdateGoodsStatusAsync(request.GoodsID,request.IsActive);
+            if (result)
             {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Success(true, "修改商品状态成功");
             }
-            return ApiResponse<bool>.Error("修改失败");
+            return ApiResponse<bool>.Error("修改商品状态失败");
         }
         #endregion
         #region 修改商品UpdateGoodsAsync
         public async Task<ApiResponse<bool>> UpdateGoodsAsync(UpdateGoodsRequest request)
         {
+            var existingGoodsCode = await _goodsRepository.GetGoodsByCodeAsync(request.GoodsCode);
+            if (existingGoodsCode != null && existingGoodsCode.GoodsID != request.GoodsID)
+            {
+                return ApiResponse<bool>.Error($"商品编码【{request.GoodsCode}】已存在");
+            }
+            var existingBarCode = await _goodsRepository.GetGoodsByBarCodeAsync(request.BarCode);
+            if (existingBarCode != null && existingBarCode.GoodsID != request.GoodsID)
+            {
+                return ApiResponse<bool>.Error($"商品条码【{request.BarCode}】已存在");
+            }
             var goods = new Goods
             {
                 GoodsID = request.GoodsID,
@@ -75,12 +96,12 @@ namespace ERP.Server.Services.Implementations
                 GoodsPrice = request.GoodsPrice,
                 Unit = request.Unit
             };
-            var Result = await _GoodsRepository.UpdateGoodsAsync(goods);
-            if (Result)
+            var result = await _goodsRepository.UpdateGoodsAsync(goods);
+            if (result)
             {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Success(true, "修改商品成功");
             }
-            return ApiResponse<bool>.Error("修改失败");
+            return ApiResponse<bool>.Error("修改商品失败");
         }
         #endregion
     }

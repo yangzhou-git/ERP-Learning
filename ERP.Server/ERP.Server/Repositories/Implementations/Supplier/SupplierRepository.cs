@@ -1,7 +1,5 @@
 ﻿using System.Data;
-using System.Net;
 using Dapper;
-using ERP.Server.Common;
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 using ERP.Server.Repositories.Interfaces;
@@ -20,8 +18,11 @@ namespace ERP.Server.Repositories.Implementations
         #region 新增供应商AddSupplierAsync
         public async Task<bool> AddSupplierAsync(Supplier supplier)
         {
-            var Sql = @"insert into Supplier (SupplierName,Contact,Phone,Address,Remark) values (@SupplierName,@Contact,@Phone,@Address,@Remark)";
-            var result = await _dbConnection.ExecuteAsync(Sql, new
+            var sql = @"insert into Supplier
+                        (SupplierName,Contact,Phone,Address,Remark,IsActive,CreateTime)
+                        values
+                        (@SupplierName,@Contact,@Phone,@Address,@Remark,1,getdate())";
+            var result = await _dbConnection.ExecuteAsync(sql, new
             {
                 SupplierName = supplier.SupplierName,
                 Contact = supplier.Contact,
@@ -32,25 +33,43 @@ namespace ERP.Server.Repositories.Implementations
             return result > 0;
         }
         #endregion
-        #region 查询供应商列表
+        #region 查询供应商列表GetSupplierListAsync
         public async Task<List<Supplier>> GetSupplierListAsync(GetSupplierListRequest request)
         {
-            int Skip = (request.Page - 1) * request.PageSize;
-            var Sql = @"select * from Supplier where (@SupplierName is null or @SupplierName = '' or SupplierName like '%' + @SupplierName + '%' ) order by SupplierID desc offset @Skip rows fetch next @PageSize rows only";
-            var Result = await _dbConnection.QueryAsync<Supplier>(Sql, new
+            var skip = (request.Page - 1) * request.PageSize;
+            var sql = @"select SupplierID,
+                               SupplierName,
+                               Contact,
+                               Phone,
+                               Address,
+                               Remark,
+                               IsActive,
+                               CreateTime
+                        from Supplier
+                        where (@SupplierName is null
+                               or @SupplierName = ''
+                               or SupplierName like '%' + @SupplierName + '%')
+                        order by SupplierID desc
+                        offset @Skip rows
+                        fetch next @PageSize rows only";
+            var result = await _dbConnection.QueryAsync<Supplier>(sql, new
             {
                 SupplierName = request.SupplierName,
-                Skip,
+                Skip = skip,
                 PageSize = request.PageSize
             });
-            return Result.ToList();
+            return result.ToList();
         }
         #endregion
-        #region 查询供应商总数 GetSupplierCountAsync
-        public async Task<int> GetSupplierCountAsync (GetSupplierListRequest request)
+        #region 查询供应商总数GetSupplierCountAsync
+        public async Task<int> GetSupplierCountAsync(GetSupplierListRequest request)
         {
-            var Sql = @"select count(1) from Supplier where (@SupplierName is null or @SupplierName = ''or SupplierName like '%' + @SupplierName + '%')";
-            int result = await _dbConnection.ExecuteScalarAsync<int>(Sql, new
+            var sql = @"select count(1)
+                        from Supplier
+                        where (@SupplierName is null
+                               or @SupplierName = ''
+                               or SupplierName like '%' + @SupplierName + '%')";
+            var result = await _dbConnection.ExecuteScalarAsync<int>(sql, new
             {
                 SupplierName = request.SupplierName
             });
@@ -60,7 +79,10 @@ namespace ERP.Server.Repositories.Implementations
         #region 修改供应商状态UpdateSupplierStatusAsync
         public async Task<bool> UpdateSupplierStatusAsync(UpdateSupplierStatusRequest request)
         {
-            var sql = @"update Supplier set IsActive = @IsActive ,UpdateTime = getdate() where SupplierID = @SupplierID";
+            var sql = @"update Supplier
+                        set IsActive = @IsActive,
+                            UpdateTime = getdate()
+                        where SupplierID = @SupplierID";
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
                 IsActive = request.IsActive,
@@ -72,7 +94,14 @@ namespace ERP.Server.Repositories.Implementations
         #region 修改供应商UpdateSupplierAsync
         public async Task<bool> UpdateSupplierAsync(UpdateSupplierRequest request)
         {
-            var sql = @"update Supplier set SupplierName = @SupplierName, Contact = @Contact, Phone = @Phone, Address = @Address, Remark = @Remark, UpdateTime = getdate() where SupplierID = @SupplierID";
+            var sql = @"update Supplier
+                        set SupplierName = @SupplierName,
+                            Contact = @Contact,
+                            Phone = @Phone,
+                            Address = @Address,
+                            Remark = @Remark,
+                            UpdateTime = getdate()
+                        where SupplierID = @SupplierID";
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
                 SupplierID = request.SupplierID,

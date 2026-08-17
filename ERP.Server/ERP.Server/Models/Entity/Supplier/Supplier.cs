@@ -3,7 +3,7 @@
     public class Supplier
     {
         public int SupplierID { get; set; }//供应商ID
-        public string SupplierName { get; set; } = string.Empty;//供应山名称
+        public string SupplierName { get; set; } = string.Empty;//供应商名称
         public string? Contact { get; set; }//联系人
         public string? Phone { get; set; }//电话
         public string? Address { get; set; }//地址

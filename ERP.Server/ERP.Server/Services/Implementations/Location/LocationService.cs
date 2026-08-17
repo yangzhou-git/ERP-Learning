@@ -56,15 +56,15 @@ namespace ERP.Server.Services.Implementations
         }
         #endregion
         #region 查询站点树GetLocationTreeAsync
-        public async Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTreeAsync()
+        public async Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTreeAsync(int CompanyID)
         {
-            var locationList = await _locationRepository.GetLocationTreeAsync();
+            var locationList = await _locationRepository.GetLocationTreeAsync(CompanyID);
             if (locationList.Count == 0)
             {
-                return ApiResponse<List<LocationTreeResponse>>.Error("暂无站点数据");
+                return ApiResponse<List<LocationTreeResponse>>.Success(new List<LocationTreeResponse>(),"暂无站点数据");
             }
             var locationTreeList = BuildLocationTree(locationList, null);
-            return ApiResponse<List<LocationTreeResponse>>.Success(locationTreeList, "查询站点树成功");
+            return ApiResponse<List<LocationTreeResponse>>.Success(locationTreeList,"查询站点树成功");
         }
         #endregion
         #region 构建站点树BuildLocationTree
@@ -93,6 +93,18 @@ namespace ERP.Server.Services.Implementations
             if (locationExist != null)
             {
                 return ApiResponse<bool>.Error($"站点编码【{request.LocationCode}】已存在,站点名称:{locationExist.LocationName}");
+            }
+            if (request.ParentID.HasValue)
+            {
+                var parentLocation = await _locationRepository.GetLocationByIdAsync(request.ParentID.Value);
+                if (parentLocation == null)
+                {
+                    return ApiResponse<bool>.Error($"父级站点ID【{request.ParentID.Value}】不存在");
+                }
+                if (parentLocation.CompanyID != request.CompanyID)
+                {
+                    return ApiResponse<bool>.Error($"新增站点【{request.LocationName}】不能选择其他公司的站点【{parentLocation.LocationName}】作为父级站点");
+                }
             }
             var location = new Location()
             {
@@ -127,11 +139,38 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Error($"站点ID【{request.LocationID}】不存在");
             }
+            // 不能选择自己作为父级站点
+            if (request.ParentID == request.LocationID)
+            {
+                return ApiResponse<bool>.Error($"站点【{currentLocation.LocationName}】不能选择自己作为父级站点");
+            }
+            // 选择了父级站点时进行校验
+            if (request.ParentID.HasValue)
+            {
+                var parentTree = await _locationRepository.GetLocationParentTreeAsync(request.ParentID.Value);
+                var parentLocation = parentTree.FirstOrDefault(x => x.LocationID == request.ParentID.Value);
+                // 父级站点不存在
+                if (parentLocation == null)
+                {
+                    return ApiResponse<bool>.Error($"父级站点ID【{request.ParentID.Value}】不存在");
+                }
+                // 不能跨公司选择父级站点
+                if (parentLocation.CompanyID != currentLocation.CompanyID)
+                {
+                    return ApiResponse<bool>.Error($"站点【{currentLocation.LocationName}】不能选择其他公司的站点【{parentLocation.LocationName}】作为父级站点");
+                }
+                // 不能选择自己的子孙站点作为父级
+                if (parentTree.Any(x => x.LocationID == request.LocationID))
+                {
+                    return ApiResponse<bool>.Error($"站点【{currentLocation.LocationName}】不能选择子孙站点【{parentLocation.LocationName}】作为父级站点");
+                }
+            }
+            // 检查站点编码是否重复
             var existingLocation = await _locationRepository.GetLocationByCodeAsync(currentLocation.CompanyID,request.LocationCode);
             if (existingLocation != null && existingLocation.LocationID != request.LocationID)
             {
-                return ApiResponse<bool>.Error($"站点编码【{request.LocationCode}】已存在,站点名称:{existingLocation.LocationName}");
-            }
+                return ApiResponse<bool>.Error($"站点编码【{request.LocationCode}】已存在,站点名称:{existingLocation.LocationName}");}
+
             var location = new Location()
             {
                 LocationID = request.LocationID,
@@ -153,7 +192,6 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Success(true, "修改站点成功");
             }
-
             return ApiResponse<bool>.Error("修改站点失败");
         }
         #endregion

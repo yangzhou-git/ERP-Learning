@@ -58,6 +58,25 @@ namespace ERP.Server.Repositories.Implementations
             return result.ToList();
         }
         #endregion
+        #region 查询全部商品分类关系GetAllGoodsCategoryAsync
+        public async Task<List<GoodsCategory>> GetAllGoodsCategoryAsync()
+        {
+            var sql = @"select CategoryID, ParentID from GoodsCategory";
+            var result = await _dbConnection.QueryAsync<GoodsCategory>(sql);
+            return result.ToList();
+        }
+        #endregion
+        #region 查询启用子分类GetActiveChildCategoryListAsync
+        public async Task<List<GoodsCategory>> GetActiveChildCategoryListAsync(int parentID)
+        {
+            var sql = @"select CategoryID, ParentID, CategoryName, IsActive from GoodsCategory where ParentID = @ParentID and IsActive = 1";
+            var result = await _dbConnection.QueryAsync<GoodsCategory>(sql, new
+            {
+                ParentID = parentID
+            });
+            return result.ToList();
+        }
+        #endregion
         #region 新增商品分类AddGoodsCategoryAsync
         public async Task<bool> AddGoodsCategoryAsync(GoodsCategory category)
         {
@@ -93,13 +112,27 @@ namespace ERP.Server.Repositories.Implementations
         #region 根据分类编码查询商品分类GetGoodsCategoryByCodeAsync
         public async Task<GoodsCategory?> GetGoodsCategoryByCodeAsync(string categoryCode)
         {
-            var sql = @"select top 1 * from GoodsCategory where CategoryCode = @CategoryCode";
+            var sql = @"select CategoryID, CategoryCode
+                from GoodsCategory
+                where CategoryCode = @CategoryCode";
 
-            return await _dbConnection.QueryFirstOrDefaultAsync<GoodsCategory>(sql,new
-                {
-                    CategoryCode = categoryCode
-                }
-            );
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<GoodsCategory>(sql, new
+            {
+                CategoryCode = categoryCode
+            });
+
+            return result;
+        }
+        #endregion
+        #region 根据分类ID查询商品分类GetGoodsCategoryByIdAsync
+        public async Task<GoodsCategory?> GetGoodsCategoryByIdAsync(int categoryID)
+        {
+            var sql = @"select CategoryID, ParentID, CategoryName, IsActive from GoodsCategory where CategoryID = @CategoryID";
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<GoodsCategory>(sql, new
+            {
+                CategoryID = categoryID
+            });
+            return result;
         }
         #endregion
         #region 修改商品分类UpdateGoodsCategoryAsync

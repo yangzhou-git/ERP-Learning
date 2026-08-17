@@ -9,7 +9,7 @@ namespace ERP.Server.Services.Interfaces
         #region 新增供应商AddSupplierAsync
         Task<ApiResponse<bool>> AddSupplierAsync(AddSupplierRequest request);
         #endregion
-        #region 查询供应商GetSupplierListAsync
+        #region 查询供应商列表GetSupplierListAsync
         Task<ApiResponse<PageResponse<SupplierListResponse>>> GetSupplierListAsync(GetSupplierListRequest request);
         #endregion
         #region 修改供应商状态UpdateSupplierStatusAsync

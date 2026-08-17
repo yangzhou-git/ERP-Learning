@@ -2,7 +2,6 @@
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
-using ERP.Server.Repositories.Implementations;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Interfaces;
 
@@ -28,7 +27,7 @@ namespace ERP.Server.Services.Implementations
                 Address = request.Address,
                 Remark = request.Remark
             };
-           var result = await _supplierRepository.AddSupplierAsync(supplier);
+            var result = await _supplierRepository.AddSupplierAsync(supplier);
             if (result)
             {
                 return ApiResponse<bool>.Success(true, "新增供应商成功");
@@ -39,41 +38,41 @@ namespace ERP.Server.Services.Implementations
         #region 查询供应商列表GetSupplierListAsync
         public async Task<ApiResponse<PageResponse<SupplierListResponse>>> GetSupplierListAsync(GetSupplierListRequest request)
         {
-            var SupplierList = await _supplierRepository.GetSupplierListAsync(request);
-            var TotalCount = await _supplierRepository.GetSupplierCountAsync(request);
-            var List = new List<SupplierListResponse>();
-            foreach (var s in SupplierList)
+            var supplierList = await _supplierRepository.GetSupplierListAsync(request);
+            var totalCount = await _supplierRepository.GetSupplierCountAsync(request);
+            var supplierResponseList = new List<SupplierListResponse>();
+            foreach (var supplierItem in supplierList)
             {
-                var SupplierResponse = new SupplierListResponse
+                var supplierResponse = new SupplierListResponse
                 {
-                    SupplierID = s.SupplierID,
-                    SupplierName = s.SupplierName,
-                    Contact = s.Contact,
-                    Phone = s.Phone,
-                    Address = s.Address,
-                    Remark = s.Remark,
-                    IsActive = s.IsActive,
-                    CreateTime = s.CreateTime
+                    SupplierID = supplierItem.SupplierID,
+                    SupplierName = supplierItem.SupplierName,
+                    Contact = supplierItem.Contact,
+                    Phone = supplierItem.Phone,
+                    Address = supplierItem.Address,
+                    Remark = supplierItem.Remark,
+                    IsActive = supplierItem.IsActive,
+                    CreateTime = supplierItem.CreateTime
                 };
-                List.Add(SupplierResponse);
+                supplierResponseList.Add(supplierResponse);
             }
-            var PageData = new PageResponse<SupplierListResponse>
+            var pageData = new PageResponse<SupplierListResponse>
             {
-                TotalCount = TotalCount,
-                List = List
+                TotalCount = totalCount,
+                List = supplierResponseList
             };
-            return ApiResponse<PageResponse<SupplierListResponse>>.Success(PageData, "查询成功");
+            return ApiResponse<PageResponse<SupplierListResponse>>.Success(pageData,"查询供应商列表成功");
         }
         #endregion
         #region 修改供应商状态UpdateSupplierStatusAsync
-        public async Task<ApiResponse<bool>> UpdateSupplierStatusAsync(UpdateSupplierStatusRequest request) 
+        public async Task<ApiResponse<bool>> UpdateSupplierStatusAsync(UpdateSupplierStatusRequest request)
         {
             var result = await _supplierRepository.UpdateSupplierStatusAsync(request);
             if (result)
             {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Success(true, "修改供应商状态成功");
             }
-            return ApiResponse<bool>.Error("修改失败");
+            return ApiResponse<bool>.Error("修改供应商状态失败");
         }
         #endregion
         #region 修改供应商UpdateSupplierAsync
@@ -82,9 +81,9 @@ namespace ERP.Server.Services.Implementations
             var result = await _supplierRepository.UpdateSupplierAsync(request);
             if (result)
             {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Success(true, "修改供应商成功");
             }
-            return ApiResponse<bool>.Error("修改失败");
+            return ApiResponse<bool>.Error("修改供应商失败");
         }
         #endregion
     }

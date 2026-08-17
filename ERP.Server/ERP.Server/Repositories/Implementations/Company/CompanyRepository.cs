@@ -50,8 +50,15 @@ namespace ERP.Server.Repositories.Implementations
         #region 根据公司编码查询公司GetCompanyByCodeAsync
         public async Task<Company?> GetCompanyByCodeAsync(string companyCode)
         {
-            var sql = "select CompanyID, CompanyCode, CompanyName, Contact, Phone, IsActive, CreateTime, UpdateTime from Company where CompanyCode = @CompanyCode";
-            var result = await _dbConnection.QueryFirstOrDefaultAsync<Company>(sql, new { CompanyCode = companyCode });
+            var sql = @"select CompanyID,
+                       CompanyCode,
+                       CompanyName
+                from Company
+                where CompanyCode = @CompanyCode";
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<Company>(sql, new
+            {
+                CompanyCode = companyCode
+            });
             return result;
         }
         #endregion

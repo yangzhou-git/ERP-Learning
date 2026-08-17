@@ -48,18 +48,18 @@ namespace ERP.Server.Services.Implementations
         #region 查询启用公司列表GetActiveCompanyListAsync
         public async Task<ApiResponse<List<CompanySelectResponse>>> GetActiveCompanyListAsync()
         {
-            var companylist = await _companyRepository.GetActiveCompanyListAsync();
-            var company = new List<CompanySelectResponse>();
-            foreach (var item in companylist)
+            var companyList = await _companyRepository.GetActiveCompanyListAsync();
+            var responseList = new List<CompanySelectResponse>();
+            foreach (var company in companyList)
             {
-                var res = new CompanySelectResponse()
+                var companyResponse = new CompanySelectResponse
                 {
-                    CompanyID = item.CompanyID,
-                    CompanyName = item.CompanyName
+                    CompanyID = company.CompanyID,
+                    CompanyName = company.CompanyName
                 };
-                company.Add(res);
+                responseList.Add(companyResponse);
             }
-            return ApiResponse<List<CompanySelectResponse>>.Success(company, "查询公司成功");
+            return ApiResponse<List<CompanySelectResponse>>.Success(responseList,"查询启用公司列表成功");
         }
         #endregion
         #region 新增公司AddCompanyAsync

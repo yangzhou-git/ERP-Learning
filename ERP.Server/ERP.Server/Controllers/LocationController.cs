@@ -26,9 +26,9 @@ namespace ERP.Server.Controllers
         #endregion
         #region 查询站点树GetLocationTree
         [HttpGet]
-        public async Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTree()
+        public async Task<ApiResponse<List<LocationTreeResponse>>> GetLocationTree(int CompanyID)
         {
-            return await _locationService.GetLocationTreeAsync();
+            return await _locationService.GetLocationTreeAsync(CompanyID);
         }
         #endregion
         #region 新增站点AddLocation

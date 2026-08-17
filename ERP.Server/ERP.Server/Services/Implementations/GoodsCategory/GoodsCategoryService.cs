@@ -2,7 +2,6 @@
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
-using ERP.Server.Repositories.Implementations;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Interfaces;
 
@@ -10,17 +9,18 @@ namespace ERP.Server.Services.Implementations
 {
     public class GoodsCategoryService : IGoodsCategoryService
     {
-        private readonly IGoodsCategoryRepository _GoodsCategoryRepository;
+        private readonly IGoodsCategoryRepository _goodsCategoryRepository;
 
-        public GoodsCategoryService(IGoodsCategoryRepository GoodsCategoryRepository)
+        public GoodsCategoryService(IGoodsCategoryRepository goodsCategoryRepository)
         {
-            _GoodsCategoryRepository = GoodsCategoryRepository;
+            _goodsCategoryRepository = goodsCategoryRepository;
         }
+
         #region 获取商品分类列表GetGoodsCategoryListAsync
         public async Task<ApiResponse<PageResponse<GoodsCategoryResponse>>> GetGoodsCategoryListAsync(GetGoodsCategoryListRequest request)
         {
-            var categoryList = await _GoodsCategoryRepository.GetGoodsCategoryListAsync(request);
-            var totalCount = await _GoodsCategoryRepository.GetGoodsCategoryCountAsync(request);
+            var categoryList = await _goodsCategoryRepository.GetGoodsCategoryListAsync(request);
+            var totalCount = await _goodsCategoryRepository.GetGoodsCategoryCountAsync(request);
             var responseList = new List<GoodsCategoryResponse>();
             foreach (var category in categoryList)
             {
@@ -48,7 +48,7 @@ namespace ERP.Server.Services.Implementations
         #region 查询商品分类树GetGoodsCategoryTreeAsync
         public async Task<ApiResponse<List<GoodsCategoryTreeResponse>>> GetGoodsCategoryTreeAsync()
         {
-            var categoryList = await _GoodsCategoryRepository.GetGoodsCategoryTreeAsync();
+            var categoryList = await _goodsCategoryRepository.GetGoodsCategoryTreeAsync();
             var rootCategoryList = categoryList.Where(x => x.ParentID == null).ToList();
             var result = new List<GoodsCategoryTreeResponse>();
             foreach (var item in rootCategoryList)
@@ -79,12 +79,12 @@ namespace ERP.Server.Services.Implementations
         #region 新增商品分类AddGoodsCategoryAsync
         public async Task<ApiResponse<bool>> AddGoodsCategoryAsync(AddGoodsCategoryRequest request)
         {
-            var existingCategory = await _GoodsCategoryRepository.GetGoodsCategoryByParentAndNameAsync(request.ParentID, request.CategoryName);
+            var existingCategory = await _goodsCategoryRepository.GetGoodsCategoryByParentAndNameAsync(request.ParentID, request.CategoryName);
             if (existingCategory != null)
             {
                 return ApiResponse<bool>.Error($"商品分类【{existingCategory.CategoryName}】已存在,请勿重复添加");
             }
-            var existingCode = await _GoodsCategoryRepository.GetGoodsCategoryByCodeAsync(request.CategoryCode);
+            var existingCode = await _goodsCategoryRepository.GetGoodsCategoryByCodeAsync(request.CategoryCode);
             if (existingCode != null)
             {
                 return ApiResponse<bool>.Error($"商品分类编码【{request.CategoryCode}】已存在,请勿重复添加");
@@ -97,7 +97,7 @@ namespace ERP.Server.Services.Implementations
                 Sort = request.Sort,
                 IsActive = true
             };
-            var result = await _GoodsCategoryRepository.AddGoodsCategoryAsync(category);
+            var result = await _goodsCategoryRepository.AddGoodsCategoryAsync(category);
             if (result)
             {
                 return ApiResponse<bool>.Success(true, "新增商品分类成功");
@@ -105,15 +105,82 @@ namespace ERP.Server.Services.Implementations
             return ApiResponse<bool>.Error("新增商品分类失败");
         }
         #endregion
-        #region 修改商品分类UpdateGoodsCategoryAsync
-        public  async Task<ApiResponse<bool>> UpdateGoodsCategoryAsync(UpdateGoodsCategoryRequest request)
+        #region 修改商品分类状态UpdateGoodsCategoryStatusAsync
+        public async Task<ApiResponse<bool>> UpdateGoodsCategoryStatusAsync(UpdateGoodsCategoryStatusRequest request)
         {
-            var existingCategory = await _GoodsCategoryRepository.GetGoodsCategoryByParentAndNameAsync(request.ParentID, request.CategoryName);
+            if (!request.IsActive)
+            {
+                var activeChildList = await _goodsCategoryRepository.GetActiveChildCategoryListAsync(request.CategoryID);
+
+                if (activeChildList.Any())
+                {
+                    var childNames = string.Join("、", activeChildList.Select(x => x.CategoryName));
+
+                    return ApiResponse<bool>.Error($"当前分类下仍存在启用的子分类【{childNames}】，请先停用这些子分类后再操作");
+                }
+            }
+            if (request.IsActive)
+            {
+                var currentCategory = await _goodsCategoryRepository.GetGoodsCategoryByIdAsync(request.CategoryID);
+
+                if (currentCategory == null)
+                {
+                    return ApiResponse<bool>.Error("当前商品分类不存在");
+                }
+                if (currentCategory.ParentID != null)
+                {
+                    var parentCategory = await _goodsCategoryRepository.GetGoodsCategoryByIdAsync(currentCategory.ParentID.Value);
+
+                    if (parentCategory == null)
+                    {
+                        return ApiResponse<bool>.Error("当前分类的父级分类不存在，请检查分类数据");
+                    }
+                    if (!parentCategory.IsActive)
+                    {
+                        return ApiResponse<bool>.Error($"父级分类【{parentCategory.CategoryName}】当前处于停用状态，请先启用父级分类后再操作");
+                    }
+                }
+            }
+            var category = new GoodsCategory
+            {
+                CategoryID = request.CategoryID,
+                IsActive = request.IsActive
+            };
+            var result = await _goodsCategoryRepository.UpdateGoodsCategoryStatusAsync(category);
+            if (result)
+            {
+                return ApiResponse<bool>.Success(true, "修改商品分类状态成功");
+            }
+            return ApiResponse<bool>.Error("修改商品分类状态失败");
+        }
+        #endregion
+        #region 修改商品分类UpdateGoodsCategoryAsync
+        public async Task<ApiResponse<bool>> UpdateGoodsCategoryAsync(UpdateGoodsCategoryRequest request)
+        {
+            if (request.ParentID == request.CategoryID)
+            {
+                return ApiResponse<bool>.Error("不能将当前分类设置为自己的父级分类，请重新选择父级分类");
+            }
+            if (request.ParentID != null)
+            {
+                var categoryList = await _goodsCategoryRepository.GetAllGoodsCategoryAsync();
+                var isDescendant = IsDescendant(request.CategoryID, request.ParentID.Value, categoryList);
+                if (isDescendant)
+                {
+                    return ApiResponse<bool>.Error("不能将当前分类移动到自己的子孙分类下，请重新选择父级分类");
+                }
+            }
+            var existingCategory = await _goodsCategoryRepository.GetGoodsCategoryByParentAndNameAsync(request.ParentID, request.CategoryName);
             if (existingCategory != null && existingCategory.CategoryID != request.CategoryID)
             {
-                return ApiResponse<bool>.Error( $"商品分类【{existingCategory.CategoryName}】已存在，请勿重复修改");
+                return ApiResponse<bool>.Error($"商品分类【{request.CategoryName}】已存在，请勿重复修改");
             }
-            var category = new GoodsCategory()
+            var existingCode = await _goodsCategoryRepository.GetGoodsCategoryByCodeAsync(request.CategoryCode);
+            if (existingCode != null && existingCode.CategoryID != request.CategoryID)
+            {
+                return ApiResponse<bool>.Error($"商品分类编码【{request.CategoryCode}】已存在");
+            }
+            var category = new GoodsCategory
             {
                 CategoryID = request.CategoryID,
                 ParentID = request.ParentID,
@@ -121,29 +188,30 @@ namespace ERP.Server.Services.Implementations
                 CategoryCode = request.CategoryCode,
                 Sort = request.Sort
             };
-            var result = await _GoodsCategoryRepository.UpdateGoodsCategoryAsync(category);
+            var result = await _goodsCategoryRepository.UpdateGoodsCategoryAsync(category);
             if (result)
             {
                 return ApiResponse<bool>.Success(true, "修改商品分类成功");
             }
-
             return ApiResponse<bool>.Error("修改商品分类失败");
         }
         #endregion
-        #region 修改商品分类状态UpdateGoodsCategoryStatusAsync
-        public async Task<ApiResponse<bool>> UpdateGoodsCategoryStatusAsync(UpdateGoodsCategoryStatusRequest request)
+        #region 判断目标节点是否为当前分类的子孙节点IsDescendant
+        private bool IsDescendant(int categoryID, int targetParentID, List<GoodsCategory> categoryList)
         {
-            var category = new GoodsCategory()
+            var children = categoryList.Where(x => x.ParentID == categoryID).ToList();
+            foreach (var child in children)
             {
-                IsActive = request.IsActive,
-                CategoryID = request.CategoryID
-            };
-            var result = await _GoodsCategoryRepository.UpdateGoodsCategoryStatusAsync(category);
-            if (result)
-            {
-                return ApiResponse<bool>.Success(true, "修改商品分类状态成功");
+                if (child.CategoryID == targetParentID)
+                {
+                    return true;
+                }
+                if (IsDescendant(child.CategoryID, targetParentID, categoryList))
+                {
+                    return true;
+                }
             }
-            return ApiResponse<bool>.Error("修改商品分类状态失败");
+            return false;
         }
         #endregion
     }

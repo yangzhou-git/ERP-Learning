@@ -6,20 +6,24 @@ namespace ERP.Server.Services.Interfaces
 {
     public interface IUserService
     {
-        #region 员工登陆LoginAsync
-        Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest Request);
+        #region 员工登录LoginAsync
+        Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request);
         #endregion
+
         #region 获取员工列表GetUserListAsync
-        Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest Request);
+        Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest request);
         #endregion
+
         #region 新增员工资料AddUserAsync
-        Task<ApiResponse<bool>> AddUserAsync(AddUserRequest Request);
+        Task<ApiResponse<bool>> AddUserAsync(AddUserRequest request);
         #endregion
+
         #region 修改员工资料UpdateUserAsync
-        Task<ApiResponse<bool>> UpdateUserAsync(UpdateUserRequest Request);
+        Task<ApiResponse<bool>> UpdateUserAsync(UpdateUserRequest request);
         #endregion
+
         #region 修改员工状态UpdateUserStatusAsync
-        Task<ApiResponse<bool>> UpdateUserStatusAsync(UpdateUserStatusRequest Request);
+        Task<ApiResponse<bool>> UpdateUserStatusAsync(UpdateUserStatusRequest request);
         #endregion
     }
 }

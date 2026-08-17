@@ -15,116 +15,148 @@ namespace ERP.Server.Services.Implementations
         {
             _userRepository = userRepository;
         }
-        
-        #region 登陆LoginAsync
-        public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest Request)
+
+        #region 登录LoginAsync
+        public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
         {
-            var User = await _userRepository.GetUserByUserNameAsync(Request.UserName);
-            if (User == null)
+            var user = await _userRepository.GetUserByUserNameAsync(request.UserName);
+
+            if (user == null)
             {
                 return ApiResponse<LoginResponse>.Error("用户名不存在");
             }
-            if (User.Password != Request.Password)
+
+            if (!user.IsActive)
+            {
+                return ApiResponse<LoginResponse>.Error("当前账号已被禁用，请联系管理员");
+            }
+
+            if (user.Password != request.Password)
             {
                 return ApiResponse<LoginResponse>.Error("密码错误");
             }
 
             var response = new LoginResponse
             {
-                UserID = User.UserID,
-                UserName = User.UserName,
-                CompanyID = User.CompanyID,
+                UserID = user.UserID,
+                UserName = user.UserName,
+                CompanyID = user.CompanyID,
                 Token = "test-token"
             };
+
             return ApiResponse<LoginResponse>.Success(response, "登录成功");
         }
         #endregion
 
-        # region 获取用户列表GetUserListAsync
-        public async Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest Request)
+        #region 获取员工列表GetUserListAsync
+        public async Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest request)
         {
-            int TotalCount = await _userRepository.GetUserCountAsync(Request);
-            List<User> UserList = await _userRepository.GetUserListAsync(Request);
-            List<UserResponse> UserResponseList = new();
-            foreach (User UserItem in UserList)
+            var totalCount = await _userRepository.GetUserCountAsync(request);
+            var userList = await _userRepository.GetUserListAsync(request);
+
+            var userResponseList = new List<UserResponse>();
+
+            foreach (var userItem in userList)
             {
-                UserResponseList.Add(new UserResponse
+                userResponseList.Add(new UserResponse
                 {
-                    UserID = UserItem.UserID,
-                    UserName = UserItem.UserName,
-                    Email = UserItem.Email,
-                    Phone = UserItem.Phone,
-                    CompanyID = UserItem.CompanyID,
-                    IsActive = UserItem.IsActive
+                    UserID = userItem.UserID,
+                    UserName = userItem.UserName,
+                    Email = userItem.Email,
+                    Phone = userItem.Phone,
+                    CompanyID = userItem.CompanyID,
+                    IsActive = userItem.IsActive
                 });
             }
-            PageResponse<UserResponse> PageData = new()
+
+            var pageData = new PageResponse<UserResponse>
             {
-                TotalCount = TotalCount,
-                List = UserResponseList
+                TotalCount = totalCount,
+                List = userResponseList
             };
-            return ApiResponse<PageResponse<UserResponse>>.Success(PageData, "查询成功");
+
+            return ApiResponse<PageResponse<UserResponse>>.Success(
+                pageData,
+                "查询员工列表成功"
+            );
         }
         #endregion
 
-        #region 添加用户AddUserAsync
-        public async Task<ApiResponse<bool>> AddUserAsync(AddUserRequest Request)
+        #region 新增员工AddUserAsync
+        public async Task<ApiResponse<bool>> AddUserAsync(AddUserRequest request)
         {
-            var existingUser = await _userRepository.GetUserByUserNameAsync(Request.UserName);
+            var existingUser = await _userRepository.GetUserByUserNameAsync(request.UserName);
+
             if (existingUser != null)
             {
-                return ApiResponse<bool>.Error("用户名已经存在");
+                return ApiResponse<bool>.Error($"用户名【{request.UserName}】已存在");
             }
+
             var user = new User
             {
-                UserName = Request.UserName,
-                Phone = Request.Phone,
-                Password = Request.Password,
-                CompanyID= Request.CompanyID,
+                UserName = request.UserName,
+                Password = request.Password,
+                Email = request.Email,
+                Phone = request.Phone,
+                CompanyID = request.CompanyID,
                 IsActive = true
             };
-            var Result = await _userRepository.AddUserAsync(user);
 
+            var result = await _userRepository.AddUserAsync(user);
 
-            if (Result)
+            if (result)
             {
-                return ApiResponse<bool>.Success(true, "新增成功");
+                return ApiResponse<bool>.Success(true, "新增员工成功");
             }
 
-
-            return ApiResponse<bool>.Error("新增失败");
+            return ApiResponse<bool>.Error("新增员工失败");
         }
         #endregion
 
         #region 修改员工资料UpdateUserAsync
-        public async Task<ApiResponse<bool>> UpdateUserAsync(UpdateUserRequest Request)
+        public async Task<ApiResponse<bool>> UpdateUserAsync(UpdateUserRequest request)
         {
-            var User = new User
+            var existingUser = await _userRepository.GetUserByUserNameAsync(request.UserName);
+
+            if (existingUser != null && existingUser.UserID != request.UserID)
             {
-                UserID = Request.UserID,
-                UserName = Request.UserName,
-                Email = Request.Email,
-                Phone = Request.Phone,
-                CompanyID = Request.CompanyID
-            };
-            var Result = await _userRepository.UpdateUserAsync(User);
-            if (Result)
-            {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Error($"用户名【{request.UserName}】已存在");
             }
-            return ApiResponse<bool>.Error("修改失败");
+
+            var user = new User
+            {
+                UserID = request.UserID,
+                UserName = request.UserName,
+                Email = request.Email,
+                Phone = request.Phone,
+                CompanyID = request.CompanyID
+            };
+
+            var result = await _userRepository.UpdateUserAsync(user);
+
+            if (result)
+            {
+                return ApiResponse<bool>.Success(true, "修改员工成功");
+            }
+
+            return ApiResponse<bool>.Error("修改员工失败");
         }
         #endregion
 
         #region 修改员工状态UpdateUserStatusAsync
-        public async Task<ApiResponse<bool>> UpdateUserStatusAsync(UpdateUserStatusRequest Request)
+        public async Task<ApiResponse<bool>> UpdateUserStatusAsync(UpdateUserStatusRequest request)
         {
-            var UserStatus = await _userRepository.UpdateUserStatusAsync(Request.UserID, Request.IsActive);
-            if (UserStatus)
+            var result = await _userRepository.UpdateUserStatusAsync(
+                request.UserID,
+                request.IsActive
+            );
+
+            if (result)
             {
-                return ApiResponse<bool>.Success(true, "修改成功");
+                return ApiResponse<bool>.Success(true, "修改员工状态成功");
             }
-            return ApiResponse<bool>.Error("修改失败");
+
+            return ApiResponse<bool>.Error("修改员工状态失败");
         }
         #endregion
     }

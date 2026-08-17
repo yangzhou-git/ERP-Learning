@@ -1,10 +1,7 @@
 ﻿using System.Data;
-using System.Net;
-using System.Numerics;
 using Dapper;
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
-using ERP.Server.Models.Response;
 using ERP.Server.Repositories.Interfaces;
 
 namespace ERP.Server.Repositories.Implementations
@@ -73,12 +70,16 @@ namespace ERP.Server.Repositories.Implementations
         }
         #endregion
         #region 查询站点树GetLocationTreeAsync
-        public async Task<List<Location>> GetLocationTreeAsync()
+        public async Task<List<Location>> GetLocationTreeAsync(int CompanyID)
         {
-            var sql = @"select LocationID,LocationName,ParentID,IsActive
+            var sql = @"select LocationID, LocationName, ParentID, IsActive
                         from Location
-                        where IsActive = 1";
-            var result = await _dbConnection.QueryAsync<Location>(sql);
+                        where CompanyID = @CompanyID
+                        and IsActive = 1";
+            var result = await _dbConnection.QueryAsync<Location>(sql, new
+            {
+                CompanyID
+            });
             return result.ToList();
         }
         #endregion
@@ -93,6 +94,29 @@ namespace ERP.Server.Repositories.Implementations
                 LocationID
             });
             return result;
+        }
+        #endregion
+        #region 查询站点父级链GetLocationParentTreeAsync
+        public async Task<List<Location>> GetLocationParentTreeAsync(int LocationID)
+        {
+            var sql = @" WITH LocationTree AS 
+                        ( 
+                            SELECT LocationID, CompanyID, LocationName, ParentID 
+                            FROM Location 
+                            WHERE LocationID = @LocationID 
+                            UNION ALL 
+                            SELECT l.LocationID, l.CompanyID, l.LocationName, l.ParentID 
+                            FROM Location l 
+                            INNER JOIN LocationTree t 
+                            ON l.LocationID = t.ParentID 
+                        ) 
+                        SELECT LocationID, CompanyID, LocationName, ParentID 
+                        FROM LocationTree;";
+            var result = await _dbConnection.QueryAsync<Location>(sql, new
+            {
+                LocationID
+            });
+            return result.ToList();
         }
         #endregion
         #region 新增站点AddLocationAsync
