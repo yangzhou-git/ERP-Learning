@@ -1,8 +1,14 @@
 using System.Data;
 using ERP.Server.Extensions;
 using Microsoft.Data.SqlClient;
+using ERP.DbMigrator;
+using FluentMigrator.Runner;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("未配置数据库连接字符串 DefaultConnection");
 
 var corsOrigins = builder.Configuration
     .GetSection("Cors:Origins")
@@ -12,9 +18,7 @@ var corsOrigins = builder.Configuration
 builder.Services.AddControllers();
 builder.Services.AddScoped<IDbConnection>(_ =>
 {
-    return new SqlConnection(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    );
+    return new SqlConnection(connectionString);
 });
 
 builder.Services.AddCors(options =>
@@ -32,8 +36,12 @@ builder.Services.AddCors(options =>
 builder.Services.AddOpenApi();
 builder.Services.AddRepositories();
 builder.Services.AddServices();
+builder.Services.AddDbMigrator(connectionString);
 
 var app = builder.Build();
+using var scope = app.Services.CreateScope();
+var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
+runner.MigrateUp();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
