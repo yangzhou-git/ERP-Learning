@@ -1,12 +1,14 @@
 ﻿using ERP.Server.Common;
 using ERP.Server.Models.Response;
 using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ERP.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
+    [Authorize]
     public class AreaController : ControllerBase
     {
         private readonly IAreaService _areaService;

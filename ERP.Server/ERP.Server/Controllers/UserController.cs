@@ -3,11 +3,13 @@ using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
 using ERP.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ERP.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;

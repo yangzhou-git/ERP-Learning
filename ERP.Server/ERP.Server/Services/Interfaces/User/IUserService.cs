@@ -6,10 +6,6 @@ namespace ERP.Server.Services.Interfaces
 {
     public interface IUserService
     {
-        #region 员工登录LoginAsync
-        Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request);
-        #endregion
-
         #region 获取员工列表GetUserListAsync
         Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest request);
         #endregion

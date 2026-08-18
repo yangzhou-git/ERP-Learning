@@ -2,12 +2,14 @@
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
 using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ERP.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
+    [Authorize]
     public class GoodsController : ControllerBase
     {
         private readonly IGoodsService _goodsService;

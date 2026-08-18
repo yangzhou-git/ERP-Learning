@@ -1,7 +1,10 @@
-﻿using ERP.Server.Repositories.Implementations;
+﻿using ERP.Server.Models.Entity;
+using ERP.Server.Repositories.Implementations;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Implementations;
+using ERP.Server.Services.Implementations.Auth;
 using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace ERP.Server.Extensions
 {
@@ -29,6 +32,8 @@ namespace ERP.Server.Extensions
             services.AddScoped<ISupplierService, SupplierService>();
             services.AddScoped<ILocationService, LocationService>();
             services.AddScoped<IAreaService, AreaService>();
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
             return services;
         }

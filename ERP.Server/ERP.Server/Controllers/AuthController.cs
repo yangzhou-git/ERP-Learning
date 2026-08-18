@@ -2,26 +2,29 @@
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
 using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ERP.Server.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]
+    [Authorize]
     public class AuthController : ControllerBase
     {
-        private readonly IUserService _userService;
+        private readonly IAuthService _authService;
 
-        public AuthController(IUserService userService)
+        public AuthController(IAuthService authService)
         {
-            _userService = userService;
+            _authService = authService;
         }
 
         #region 登陆接口Login
         [HttpPost]
+        [AllowAnonymous]
         public async Task<ApiResponse<LoginResponse>> Login(LoginRequest request)
         {
-            return await _userService.LoginAsync(request);
+            return await _authService.LoginAsync(request);
         }
         #endregion
     }

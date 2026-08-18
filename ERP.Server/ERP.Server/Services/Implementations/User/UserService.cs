@@ -4,49 +4,20 @@ using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Interfaces;
+using Microsoft.AspNetCore.Identity;
 
 namespace ERP.Server.Services.Implementations
 {
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public UserService(IUserRepository userRepository)
+        public UserService(IUserRepository userRepository, IPasswordHasher<User> passwordHasher)
         {
             _userRepository = userRepository;
+            _passwordHasher = passwordHasher;
         }
-
-        #region 登录LoginAsync
-        public async Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request)
-        {
-            var user = await _userRepository.GetUserByUserNameAsync(request.UserName);
-
-            if (user == null)
-            {
-                return ApiResponse<LoginResponse>.Error("用户名不存在");
-            }
-
-            if (!user.IsActive)
-            {
-                return ApiResponse<LoginResponse>.Error("当前账号已被禁用，请联系管理员");
-            }
-
-            if (user.Password != request.Password)
-            {
-                return ApiResponse<LoginResponse>.Error("密码错误");
-            }
-
-            var response = new LoginResponse
-            {
-                UserID = user.UserID,
-                UserName = user.UserName,
-                CompanyID = user.CompanyID,
-                Token = "test-token"
-            };
-
-            return ApiResponse<LoginResponse>.Success(response, "登录成功");
-        }
-        #endregion
 
         #region 获取员工列表GetUserListAsync
         public async Task<ApiResponse<PageResponse<UserResponse>>> GetUserListAsync(GetUserListRequest request)
@@ -95,13 +66,12 @@ namespace ERP.Server.Services.Implementations
             var user = new User
             {
                 UserName = request.UserName,
-                Password = request.Password,
                 Email = request.Email,
                 Phone = request.Phone,
                 CompanyID = request.CompanyID,
                 IsActive = true
             };
-
+            user.Password = _passwordHasher.HashPassword(user, request.Password);
             var result = await _userRepository.AddUserAsync(user);
 
             if (result)
