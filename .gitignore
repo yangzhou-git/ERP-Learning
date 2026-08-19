@@ -7,3 +7,13 @@ dist/
 .env.*
 !.env.example
 *.user
+
+# =========================
+# Docker / Redis
+# =========================
+
+# Redis 持久化数据
+DockerData/
+
+# Redis 本地配置（包含密码）
+DockerConfig/

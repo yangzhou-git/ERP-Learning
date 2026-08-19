@@ -1,11 +1,8 @@
 using System.Data;
-using System.Text;
 using ERP.DbMigrator;
 using ERP.Server.Extensions;
 using FluentMigrator.Runner;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Data.SqlClient;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,15 +14,6 @@ var corsOrigins = builder.Configuration
     .GetSection("Cors:Origins")
     .Get<string[]>();
 // Add services to the container.
-
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("未配置 Jwt:Key");
-
-var jwtIssuer = builder.Configuration["Jwt:Issuer"]
-    ?? throw new InvalidOperationException("未配置 Jwt:Issuer");
-
-var jwtAudience = builder.Configuration["Jwt:Audience"]
-    ?? throw new InvalidOperationException("未配置 Jwt:Audience");
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<IDbConnection>(_ =>
@@ -44,34 +32,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services
-    .AddAuthentication(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
-
-builder.Services.AddAuthorization();
-
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddRepositories();
 builder.Services.AddServices();
+builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddRedis(builder.Configuration);
 builder.Services.AddDbMigrator(connectionString);
 
 var app = builder.Build();
