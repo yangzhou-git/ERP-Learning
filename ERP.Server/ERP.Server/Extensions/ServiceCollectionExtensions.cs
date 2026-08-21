@@ -37,7 +37,7 @@ namespace ERP.Server.Extensions
             services.AddScoped<ILocationService, LocationService>();
             services.AddScoped<IAreaService, AreaService>();
             services.AddScoped<IAuthService, AuthService>();
-
+            services.AddScoped<IRedisCacheService, RedisCacheService>();
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
             return services;
