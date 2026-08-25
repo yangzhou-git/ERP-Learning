@@ -23,6 +23,7 @@ namespace ERP.Server.Extensions
             services.AddScoped<ISupplierRepository, SupplierRepository>();
             services.AddScoped<ILocationRepository, LocationRepository>();
             services.AddScoped<IAreaRepository, AreaRepository>();
+            services.AddScoped<IUnitRepository, UnitRepository>();
 
             return services;
         }
@@ -39,6 +40,8 @@ namespace ERP.Server.Extensions
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IRedisCacheService, RedisCacheService>();
             services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+            services.AddScoped<ICurrentUserService, CurrentUserService>();
+            services.AddScoped<IUnitService, UnitService>();
 
             return services;
         }

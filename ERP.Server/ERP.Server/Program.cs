@@ -34,6 +34,7 @@ builder.Services.AddCors(options =>
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddRepositories();
 builder.Services.AddServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
