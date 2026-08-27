@@ -21,6 +21,9 @@ namespace ERP.Server.Repositories.Interfaces
         #region 根据商品条码查询商品GetGoodsByBarCodeAsync
         Task<Goods?> GetGoodsByBarCodeAsync(string barCode);
         #endregion
+        #region 根据商品ID查询商品GetGoodsByIdAsync
+        Task<Goods?> GetGoodsByIdAsync(int goodsID);
+        #endregion
         #region 修改商品状态UpdateGoodsStatusAsync
         Task<bool> UpdateGoodsStatusAsync(int goodsID, bool isActive);
         #endregion

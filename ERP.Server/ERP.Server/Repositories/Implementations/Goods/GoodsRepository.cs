@@ -109,6 +109,19 @@ namespace ERP.Server.Repositories.Implementations
             return result;
         }
         #endregion
+
+        #region 根据商品ID查询商品GetGoodsByIdAsync
+        public async Task<Goods?> GetGoodsByIdAsync(int goodsID)
+        {
+            var sql = @"select GoodsID, BarCode, GoodsCode, CategoryID, GoodsTitle, GoodsSubTitle, GoodsPrice, Unit, IsActive, CreateTime, UpdateTime from Goods
+                        where GoodsID = @GoodsID";
+            return await _dbConnection.QueryFirstOrDefaultAsync<Goods>(sql, new
+            {
+                GoodsID = goodsID
+            });
+        }
+        #endregion
+
         #region 修改商品状态UpdateGoodsStatusAsync
         public async Task<bool> UpdateGoodsStatusAsync(int goodsID, bool isActive)
         {
