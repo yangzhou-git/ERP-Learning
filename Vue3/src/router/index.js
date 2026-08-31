@@ -12,7 +12,8 @@ const routes = [
       { path: 'supplier', name:'SupplierList', component: () => import('../views/supplier/SupplierList.vue')},
       { path: 'company', name:'CompanyList', component: () => import('../views/company/CompanyList.vue')},
       { path:'goodscategory', name:'GoodsCategoryList', component:() => import('../views/goodscategory/GoodsCategoryList.vue')},
-      { path:'location', name:'Location', component:() => import('../views/location/LocationList.vue')}
+      { path:'location', name:'Location', component:() => import('../views/location/LocationList.vue')},
+      { path:'unit', name:'Unit', component:() => import('../views/unit/UnitList.vue')}
     ]
   }
 ]

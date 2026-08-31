@@ -52,6 +52,10 @@
                             <span>商品分类资料</span>
                         </el-menu-item>
 
+                        <el-menu-item index="/index/unit">
+                            <el-icon><ScaleToOriginal /></el-icon>
+                            <span>单位管理</span>
+                        </el-menu-item>
 
                         <el-menu-item index="/index/goods">
                             <el-icon><Goods /></el-icon>
@@ -96,7 +100,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { House,User,Goods,ShoppingCart,Setting,ArrowDown,Folder,OfficeBuilding,Collection,Shop,Location } from '@element-plus/icons-vue'
+import { House,User,Goods,ShoppingCart,Setting,ArrowDown,Folder,OfficeBuilding,Collection,Shop,Location,ScaleToOriginal } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const UserName = ref(localStorage.getItem('userName') || '')
