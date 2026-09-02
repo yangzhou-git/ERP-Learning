@@ -13,7 +13,6 @@
             <el-table-column prop="goodsTitle" label="商品名称"></el-table-column>
             <el-table-column prop="categoryName" label="商品分类"></el-table-column>
             <el-table-column prop="goodsPrice" label="商品价格"></el-table-column>
-            <el-table-column prop="unit" label="单位"></el-table-column>
             <el-table-column label="是否启用">
                 <template #default="scope">
                     <el-switch v-model="scope.row.isActive" active-text="启用" inactive-text="禁用" @change="ChangeGoodsStatus(scope.row)"/>
@@ -22,6 +21,7 @@
             <el-table-column label="操作">
                 <template #default="scope">
                     <el-button type="primary" @click="OpenEditGoods(scope.row)">编辑</el-button>
+                    <el-button type="success" @click="OpenGoodsUnit(scope.row)">单位维护</el-button>
                 </template>
             </el-table-column>
         </el-table>
@@ -37,17 +37,18 @@
             />
         </div>
     <AddGoods ref="AddGoodsRef"  @success="GetGoodsList"></AddGoods>
-    <EditGoods v-model="EditGoodsDialogVisible" :Goods="EditGoodsModel"  @success="GetGoodsList"></EditGoods>
+    <EditGoods ref="EditGoodsRef" @success="GetGoodsList"></EditGoods>
+    <GoodsUnit ref="GoodsUnitRef"></GoodsUnit>
     </div>
 </template>
 
 <script setup>
 import { ref,onMounted } from 'vue'
-import request from '../../utils/request';
 import { GetGoodsListApi, UpdateGoodsStatusApi } from '../../api/goods'
 import AddGoods from './components/AddGoods.vue'
 import EditGoods from './components/EditGoods.vue'
 import { ElMessage } from 'element-plus';
+import GoodsUnit from './components/GoodsUnit.vue'
 
 onMounted(() => {
     SearchGoods();
@@ -75,13 +76,10 @@ async function GetGoodsList() {
     }
 }
 
-const EditGoodsDialogVisible = ref(false)
-const EditGoodsModel = ref({})
-
 //修改商品资料
+const EditGoodsRef = ref(null)
 function OpenEditGoods(row){
-    EditGoodsModel.value = row
-    EditGoodsDialogVisible.value = true
+    EditGoodsRef.value.OpenDialog(row)
 }
 
 //打开新增商品
@@ -124,6 +122,11 @@ async function ChangeGoodsStatus(row){
         row.isActive = oldStatus
         ElMessage.error("系统异常，请稍后重试")
     }
+}
+
+const GoodsUnitRef = ref(null)
+function OpenGoodsUnit(row){
+    GoodsUnitRef.value.OpenDialog(row)
 }
 </script>
 

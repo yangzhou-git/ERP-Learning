@@ -141,7 +141,7 @@ namespace ERP.Server.Services.Implementations
             }
             goodsUnit.UnitID = request.UnitID;
             goodsUnit.ConversionRate = request.ConversionRate;
-            goodsUnit.Sort = request.Sort;
+            //goodsUnit.Sort = request.Sort;
             goodsUnit.UpdateUserID = _currentUserService.UserID;
             var result = await _goodsUnitRepository.UpdateGoodsUnitAsync(goodsUnit);
             if (result)

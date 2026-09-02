@@ -1,5 +1,6 @@
 ﻿using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
+using ERP.Server.Models.Response.Unit;
 
 namespace ERP.Server.Repositories.Interfaces
 {
@@ -10,6 +11,9 @@ namespace ERP.Server.Repositories.Interfaces
         #endregion
         #region 根据单位编码查询GetUnitByCodeAsync
         Task<Unit?> GetUnitByCodeAsync(string unitCode);
+        #endregion
+        #region 查询单位下拉选项GetUnitOptionsAsync
+        Task<List<UnitOptionResponse>> GetUnitOptionsAsync();
         #endregion
         #region 查询单位列表GetUnitListAsync
         Task<List<Unit>> GetUnitListAsync(GetUnitListRequest request);

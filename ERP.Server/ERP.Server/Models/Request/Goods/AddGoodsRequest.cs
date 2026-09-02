@@ -8,6 +8,5 @@
         public string GoodsTitle { get; set; } = string.Empty;
         public string? GoodsSubTitle { get; set; }
         public decimal GoodsPrice { get; set; }
-        public string Unit { get; set; } = string.Empty;
     }
 }

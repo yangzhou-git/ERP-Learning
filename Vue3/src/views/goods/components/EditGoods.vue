@@ -21,15 +21,6 @@
             <el-form-item label="商品价格" prop="goodsPrice">
                 <el-input-number v-model="EditGoodsModel.goodsPrice" :min="0" :precision="2"/>
             </el-form-item>
-           <el-form-item label="商品单位" prop="unit">
-                <el-select v-model="EditGoodsModel.unit" placeholder="请选择商品单位">
-                    <el-option label="本" value="本" />
-                    <el-option label="册" value="册" />
-                    <el-option label="套" value="套" />
-                    <el-option label="个" value="个" />
-                    <el-option label="件" value="件" />
-                </el-select>
-            </el-form-item>
         </el-form>
         <template #footer>
             <el-button @click="EditGoodsDialogVisible=false">取消</el-button>
@@ -40,12 +31,12 @@
 
 
 <script setup>
-import { reactive, ref, watch, onMounted } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { UpdateGoodsApi } from '../../../api/goods'
 import { ElMessage } from 'element-plus'
 import { GetGoodsCategoryListApi } from '../../../api/goodsCategory'
 
-const EditGoodsDialogVisible = defineModel()
+const EditGoodsDialogVisible = ref(false)
 const EditGoodsFormRef = ref()
 
 onMounted(()=>{
@@ -59,16 +50,7 @@ const EditGoodsModel = reactive({
     categoryID:null,
     goodsTitle:"",
     goodsSubTitle:"",
-    goodsPrice:0,
-    unit:""
-})
-
-//接收父组件数据
-const props = defineProps({
-    Goods:{
-        type:Object,
-        default:()=>({})
-    }
+    goodsPrice:0
 })
 
 //通知父组件
@@ -76,17 +58,12 @@ const emit = defineEmits([
     "success"
 ])
 
-//数据回显
-watch(()=>props.Goods,(newValue)=>{
-    Object.assign(EditGoodsModel,newValue),{ deep:true, immediate:true}
-})
-
 const Rules = {
+    goodsCode: [{ required: true, message: '请输入商品编码', trigger: 'blur' }],
     barCode:[{ required:true, message:"请输入商品条码", trigger:"blur" }],
     goodsTitle:[{ required:true, message:"请输入商品名称", trigger:"blur" }],
     categoryID:[{ required:true, message:"请选择商品分类", trigger:"change" }],
-    goodsPrice:[{ required:true, message:"请输入商品价格", trigger:"blur" }],
-    unit:[{ required:true, message:"请选择商品单位", trigger:"change" }]
+    goodsPrice:[{ required:true, message:"请输入商品价格", trigger:"blur" }]
 }
 
 //获取分类
@@ -94,7 +71,9 @@ const CategoryList = ref([])
 async function GetGoodsCategoryList(){
     const res = await GetGoodsCategoryListApi()
     if(res.code===200){
-        CategoryList.value = res.data
+        CategoryList.value = res.data.list
+    } else {
+        ElMessage.error(res.message)
     }
 }
 
@@ -109,13 +88,24 @@ const UpdateGoods = async () => {
         await EditGoodsFormRef.value.validate()
         const res = await UpdateGoodsApi(EditGoodsModel)
         if(res.code === 200){
-            ElMessage.success("修改成功")
+            ElMessage.success(res.message)
             EditGoodsDialogVisible.value = false
             emit("success")
+        } else {
+            ElMessage.error(res.message)
         }
     } catch(error){
         console.log("修改商品失败：",error)
-        ElMessage.error("修改商品失败")
+        ElMessage.error(res.message)
     }
 }
+
+function OpenDialog(row) {
+    Object.assign(EditGoodsModel, row)
+    EditGoodsDialogVisible.value = true
+}
+
+defineExpose({
+    OpenDialog
+})
 </script>

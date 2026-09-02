@@ -1,10 +1,12 @@
 import request from "../../utils/request";
 
-//查询单位列表
+// 单位管理页面：搜索 + 分页
 export function GetUnitListApi(params){
-    return request.get('/Unit/GetUnitList', {
-        params
-    })
+    return request.get('/Unit/GetUnitList', { params })
+}
+// 业务下拉框：直接获取启用单位
+export function GetUnitOptionsApi(){
+    return request.get('/Unit/GetUnitOptions')
 }
 // 修改单位状态
 export function UpdateUnitStatusApi(data){

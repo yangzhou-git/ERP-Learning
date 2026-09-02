@@ -10,10 +10,14 @@ namespace ERP.Server.Services.Implementations
     public class GoodsService : IGoodsService
     {
         private readonly IGoodsRepository _goodsRepository;
+        private readonly ICurrentUserService _currentUserService;
+        private readonly IGoodsCategoryRepository _goodsCategoryRepository;
 
-        public GoodsService(IGoodsRepository goodsRepository)
+        public GoodsService(IGoodsRepository goodsRepository, ICurrentUserService currentUserService, IGoodsCategoryRepository goodsCategoryRepository)
         {
             _goodsRepository = goodsRepository;
+            _currentUserService = currentUserService;
+            _goodsCategoryRepository = goodsCategoryRepository;
         }
 
         #region 新增商品AddGoodsAsync
@@ -29,6 +33,15 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Error($"商品条码【{request.BarCode}】已存在");
             }
+            var category = await _goodsCategoryRepository.GetGoodsCategoryByIdAsync(request.CategoryID);
+            if (category == null)
+            {
+                return ApiResponse<bool>.Error($"商品分类ID【{request.CategoryID}】不存在，请重新选择商品分类");
+            }
+            if (!category.IsActive)
+            {
+                return ApiResponse<bool>.Error($"商品分类【{category.CategoryName}】已停用，请选择其他商品分类");
+            }
             var goods = new Goods
             {
                 BarCode = request.BarCode,
@@ -37,7 +50,7 @@ namespace ERP.Server.Services.Implementations
                 GoodsTitle = request.GoodsTitle,
                 GoodsSubTitle = request.GoodsSubTitle,
                 GoodsPrice = request.GoodsPrice,
-                Unit = request.Unit,
+                CreateUserID = _currentUserService.UserID,
                 IsActive = true
             };
             var result = await _goodsRepository.AddGoodsAsync(goods);
@@ -64,7 +77,14 @@ namespace ERP.Server.Services.Implementations
         #region 修改商品状态UpdateGoodsStatusAsync
         public async Task<ApiResponse<bool>> UpdateGoodsStatusAsync(UpdateGoodsStatusRequest request)
         {
-            var result = await _goodsRepository.UpdateGoodsStatusAsync(request.GoodsID,request.IsActive);
+            var goods = await _goodsRepository.GetGoodsByIdAsync(request.GoodsID);
+            if (goods == null)
+            {
+                return ApiResponse<bool>.Error($"商品ID【{request.GoodsID}】不存在");
+            }
+            goods.IsActive = request.IsActive;
+            goods.UpdateUserID = _currentUserService.UserID;
+            var result = await _goodsRepository.UpdateGoodsStatusAsync(goods);
             if (result)
             {
                 return ApiResponse<bool>.Success(true, "修改商品状态成功");
@@ -75,6 +95,11 @@ namespace ERP.Server.Services.Implementations
         #region 修改商品UpdateGoodsAsync
         public async Task<ApiResponse<bool>> UpdateGoodsAsync(UpdateGoodsRequest request)
         {
+            var currentGoods = await _goodsRepository.GetGoodsByIdAsync(request.GoodsID);
+            if (currentGoods == null)
+            {
+                return ApiResponse<bool>.Error($"商品ID【{request.GoodsID}】不存在");
+            }
             var existingGoodsCode = await _goodsRepository.GetGoodsByCodeAsync(request.GoodsCode);
             if (existingGoodsCode != null && existingGoodsCode.GoodsID != request.GoodsID)
             {
@@ -85,6 +110,15 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Error($"商品条码【{request.BarCode}】已存在");
             }
+            var category = await _goodsCategoryRepository.GetGoodsCategoryByIdAsync(request.CategoryID);
+            if (category == null)
+            {
+                return ApiResponse<bool>.Error($"商品分类ID【{request.CategoryID}】不存在，请重新选择商品分类");
+            }
+            if (!category.IsActive)
+            {
+                return ApiResponse<bool>.Error($"商品分类【{category.CategoryName}】已停用，请选择其他商品分类");
+            }
             var goods = new Goods
             {
                 GoodsID = request.GoodsID,
@@ -94,7 +128,7 @@ namespace ERP.Server.Services.Implementations
                 GoodsTitle = request.GoodsTitle,
                 GoodsSubTitle = request.GoodsSubTitle,
                 GoodsPrice = request.GoodsPrice,
-                Unit = request.Unit
+                UpdateUserID = _currentUserService.UserID
             };
             var result = await _goodsRepository.UpdateGoodsAsync(goods);
             if (result)

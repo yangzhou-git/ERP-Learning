@@ -3,6 +3,7 @@ using System.Reflection.Metadata.Ecma335;
 using Dapper;
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
+using ERP.Server.Models.Response.Unit;
 using ERP.Server.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -54,6 +55,15 @@ namespace ERP.Server.Repositories.Implementations
                 CreateUserID = unit.CreateUserID
             });
             return result > 0;
+        }
+        #endregion
+
+        #region 查询单位下拉选项GetUnitOptionsAsync
+        public async Task<List<UnitOptionResponse>> GetUnitOptionsAsync()
+        {
+            var sql = @"select UnitID, UnitName, UnitCode from Unit where IsActive = 1 order by Sort asc, UnitID asc";
+            var result = await _dbConnection.QueryAsync<UnitOptionResponse>(sql);
+            return result.ToList();
         }
         #endregion
 

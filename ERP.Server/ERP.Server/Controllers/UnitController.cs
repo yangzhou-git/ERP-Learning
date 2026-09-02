@@ -4,6 +4,7 @@ using ERP.Server.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using ERP.Server.Models.Response;
+using ERP.Server.Models.Response.Unit;
 
 namespace ERP.Server.Controllers
 {
@@ -24,6 +25,14 @@ namespace ERP.Server.Controllers
         public async Task<ApiResponse<bool>> AddUnit(AddUnitRequest request)
         {
             return await _unitService.AddUnitAsync(request);
+        }
+        #endregion
+
+        #region 查询单位下拉选项GetUnitOptions
+        [HttpGet]
+        public async Task<ApiResponse<List<UnitOptionResponse>>> GetUnitOptions()
+        {
+            return await _unitService.GetUnitOptionsAsync();
         }
         #endregion
 

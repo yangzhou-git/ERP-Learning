@@ -20,9 +20,9 @@ namespace ERP.Server.Repositories.Implementations
         public async Task<bool> AddGoodsAsync(Goods goods)
         {
             var sql = @"insert into Goods
-                        (BarCode,GoodsCode,CategoryID,GoodsTitle,GoodsSubTitle,GoodsPrice,Unit,IsActive,CreateTime)
+                        (BarCode,GoodsCode,CategoryID,GoodsTitle,GoodsSubTitle,GoodsPrice,IsActive,CreateUserID,CreateTime)
                         values
-                        (@BarCode,@GoodsCode,@CategoryID,@GoodsTitle,@GoodsSubTitle,@GoodsPrice,@Unit,@IsActive,getdate())";
+                        (@BarCode,@GoodsCode,@CategoryID,@GoodsTitle,@GoodsSubTitle,@GoodsPrice,@IsActive,@CreateUserID,getdate())";
 
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
@@ -32,7 +32,7 @@ namespace ERP.Server.Repositories.Implementations
                 GoodsTitle = goods.GoodsTitle,
                 GoodsSubTitle = goods.GoodsSubTitle,
                 GoodsPrice = goods.GoodsPrice,
-                Unit = goods.Unit,
+                CreateUserID = goods.CreateUserID,
                 IsActive = goods.IsActive
             });
 
@@ -51,10 +51,17 @@ namespace ERP.Server.Repositories.Implementations
                        g.CategoryID,
                        c.CategoryName,
                        g.GoodsPrice,
-                       g.Unit,
-                       g.IsActive
+                       g.IsActive,
+                       g.CreateUserID,
+                       cu.UserName as CreateUserName,
+                       g.CreateTime,
+                       g.UpdateUserID,
+                       uu.UserName as UpdateUserName,
+                       g.UpdateTime
                 from Goods g
                 join GoodsCategory c on g.CategoryID = c.CategoryID
+                left join Users cu on g.CreateUserID = cu.UserID
+                left join Users uu on g.UpdateUserID = uu.UserID
                 where (@GoodsTitle is null
                        or @GoodsTitle = ''
                        or g.GoodsTitle like '%' + @GoodsTitle + '%')
@@ -113,7 +120,7 @@ namespace ERP.Server.Repositories.Implementations
         #region 根据商品ID查询商品GetGoodsByIdAsync
         public async Task<Goods?> GetGoodsByIdAsync(int goodsID)
         {
-            var sql = @"select GoodsID, BarCode, GoodsCode, CategoryID, GoodsTitle, GoodsSubTitle, GoodsPrice, Unit, IsActive, CreateTime, UpdateTime from Goods
+            var sql = @"select GoodsID, BarCode, GoodsCode, CategoryID, GoodsTitle, GoodsSubTitle, GoodsPrice, IsActive, CreateUserID, CreateTime, UpdateUserID, UpdateTime from Goods
                         where GoodsID = @GoodsID";
             return await _dbConnection.QueryFirstOrDefaultAsync<Goods>(sql, new
             {
@@ -123,19 +130,19 @@ namespace ERP.Server.Repositories.Implementations
         #endregion
 
         #region 修改商品状态UpdateGoodsStatusAsync
-        public async Task<bool> UpdateGoodsStatusAsync(int goodsID, bool isActive)
+        public async Task<bool> UpdateGoodsStatusAsync(Goods goods)
         {
             var sql = @"update Goods
-                        set IsActive = @IsActive,
-                            UpdateTime = getdate()
-                        where GoodsID = @GoodsID";
-
+                set IsActive = @IsActive,
+                    UpdateUserID = @UpdateUserID,
+                    UpdateTime = getdate()
+                where GoodsID = @GoodsID";
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
-                GoodsID = goodsID,
-                IsActive = isActive
+                GoodsID = goods.GoodsID,
+                IsActive = goods.IsActive,
+                UpdateUserID = goods.UpdateUserID
             });
-
             return result > 0;
         }
         #endregion
@@ -149,10 +156,9 @@ namespace ERP.Server.Repositories.Implementations
                             GoodsTitle = @GoodsTitle,
                             GoodsSubTitle = @GoodsSubTitle,
                             GoodsPrice = @GoodsPrice,
-                            Unit = @Unit,
+                            UpdateUserID = @UpdateUserID,
                             UpdateTime = getdate()
                         where GoodsID = @GoodsID";
-
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
                 GoodsID = goods.GoodsID,
@@ -162,9 +168,8 @@ namespace ERP.Server.Repositories.Implementations
                 GoodsTitle = goods.GoodsTitle,
                 GoodsSubTitle = goods.GoodsSubTitle,
                 GoodsPrice = goods.GoodsPrice,
-                Unit = goods.Unit
+                UpdateUserID = goods.UpdateUserID
             });
-
             return result > 0;
         }
         #endregion

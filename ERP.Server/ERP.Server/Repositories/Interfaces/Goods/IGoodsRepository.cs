@@ -25,7 +25,7 @@ namespace ERP.Server.Repositories.Interfaces
         Task<Goods?> GetGoodsByIdAsync(int goodsID);
         #endregion
         #region 修改商品状态UpdateGoodsStatusAsync
-        Task<bool> UpdateGoodsStatusAsync(int goodsID, bool isActive);
+        Task<bool> UpdateGoodsStatusAsync(Goods goods);
         #endregion
         #region 修改商品资料UpdateGoodsAsync
         Task<bool> UpdateGoodsAsync(Goods goods);

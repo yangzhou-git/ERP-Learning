@@ -10,7 +10,12 @@
         public int CategoryID { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public decimal GoodsPrice { get; set; }
-        public string Unit { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public int CreateUserID { get; set; }
+        public string CreateUserName { get; set; } = string.Empty;
+        public DateTime CreateTime { get; set; }
+        public int? UpdateUserID { get; set; }
+        public string? UpdateUserName { get; set; }
+        public DateTime? UpdateTime { get; set; }
     }
 }

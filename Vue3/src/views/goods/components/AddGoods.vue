@@ -21,15 +21,6 @@
             <el-form-item label="商品价格" prop="GoodsPrice">
                 <el-input-number v-model="AddGoodsModel.GoodsPrice" :min="0" :precision="2" placeholder="请输入商品价格"/>
             </el-form-item>
-            <el-form-item label="商品单位" prop="Unit">
-                <el-select v-model="AddGoodsModel.Unit" placeholder="请选择商品单位">
-                    <el-option label="本" value="本" />
-                    <el-option label="册" value="册" />
-                    <el-option label="套" value="套" />
-                    <el-option label="个" value="个" />
-                    <el-option label="件" value="件" />
-                </el-select>
-            </el-form-item>
             <el-button type="primary" @click="AddGoods">新增商品</el-button>
         </el-form>
     </el-dialog>
@@ -60,8 +51,7 @@ const AddGoodsModel = reactive({
     CategoryID: null,
     GoodsTitle: '',
     GoodsSubTitle: '',
-    GoodsPrice: null,
-    Unit: ''
+    GoodsPrice: null
 })
 //获取分类
 const CategoryList = ref([])
@@ -69,7 +59,7 @@ async function GetGoodsCategoryList() {
     try {
         const res = await GetGoodsCategoryListApi()
         if (res.code === 200) {
-            CategoryList.value = res.data
+            CategoryList.value = res.data.list
         } else {
             ElMessage.error(res.message)
         }
@@ -81,6 +71,9 @@ async function GetGoodsCategoryList() {
 //表单校验
 const AddGoodsFormRef = ref()
 const Rules = {
+    GoodsCode: [
+        { required: true, message: '请输入商品编码', trigger: 'blur' }
+    ],
     BarCode: [
         { required: true, message: '请输入商品条码', trigger: 'blur' }
     ],
@@ -92,9 +85,6 @@ const Rules = {
     ],
     GoodsPrice: [
         { required: true, message: '请输入商品价格', trigger: 'blur' }
-    ],
-    Unit: [
-        { required: true, message: '请输入商品单位', trigger: 'change' }
     ]
 }
 const emit = defineEmits([

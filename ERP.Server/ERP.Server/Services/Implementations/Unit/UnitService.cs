@@ -2,6 +2,7 @@
 using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 using ERP.Server.Models.Response;
+using ERP.Server.Models.Response.Unit;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Interfaces;
 
@@ -46,6 +47,14 @@ namespace ERP.Server.Services.Implementations
                 return ApiResponse<bool>.Success(true,"新增单位成功");
             }
             return ApiResponse<bool>.Error("新增单位失败");
+        }
+        #endregion
+
+        #region 查询单位下拉选项GetUnitOptionsAsync
+        public async Task<ApiResponse<List<UnitOptionResponse>>> GetUnitOptionsAsync()
+        {
+            var unit = await _unitRepository.GetUnitOptionsAsync();
+            return ApiResponse<List<UnitOptionResponse>>.Success(unit, "查询单位下拉选项成功");
         }
         #endregion
 

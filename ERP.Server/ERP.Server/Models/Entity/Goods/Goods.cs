@@ -9,9 +9,10 @@
         public string GoodsTitle { get; set; } = string.Empty;//商品名称/书名
         public string? GoodsSubTitle { get; set; }//商品副名
         public decimal GoodsPrice { get; set; }//商品价格
-        public string Unit { get; set; } = string.Empty;//商品单位
         public bool IsActive { get; set; }//是否启用
+        public int CreateUserID { get; set; }//创建人ID
         public DateTime CreateTime { get; set; }//商品创建时间
+        public int? UpdateUserID { get; set; }//修改人ID
         public DateTime? UpdateTime { get; set; }//商品修改时间
     }
 }
