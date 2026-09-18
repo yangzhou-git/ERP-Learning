@@ -5,6 +5,7 @@ using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Implementations;
 using ERP.Server.Services.Implementations.Auth;
 using ERP.Server.Services.Interfaces;
+using ERP.Server.Services.Interfaces.Arrival;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -25,6 +26,8 @@ namespace ERP.Server.Extensions
             services.AddScoped<IAreaRepository, AreaRepository>();
             services.AddScoped<IUnitRepository, UnitRepository>();
             services.AddScoped<IGoodsUnitRepository, GoodsUnitRepository>();
+            services.AddScoped<IArrivalRepository, ArrivalRepository>();
+            services.AddScoped<IInventoryRepository, InventoryRepository>();
 
             return services;
         }
@@ -44,6 +47,8 @@ namespace ERP.Server.Extensions
             services.AddScoped<ICurrentUserService, CurrentUserService>();
             services.AddScoped<IUnitService, UnitService>();
             services.AddScoped<IGoodsUnitService, GoodsUnitService>();
+            services.AddScoped<IArrivalService, ArrivalService>();
+            services.AddScoped<IInventoryService, InventoryService>();
 
             return services;
         }

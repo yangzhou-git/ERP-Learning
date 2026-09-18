@@ -14,6 +14,8 @@ namespace ERP.Server.Models.Entity
         public decimal TotalAmount { get; set; }//到货总金额
         public int? AuditUserID { get; set; }//审核人ID
         public DateTime? AuditTime { get; set; }//审核时间
+        public int? CancelAuditUserID { get; set; } // 反审核人ID
+        public DateTime? CancelAuditTime { get; set; } // 反审核时间
         public string? Remark { get; set; }//备注
         public int CreateUserID { get; set; }//创建人ID
         public DateTime CreateTime { get; set; }//创建时间
@@ -21,6 +23,8 @@ namespace ERP.Server.Models.Entity
         public DateTime? UpdateTime { get; set; }//最后修改时间
         public int? StockInUserID { get; set; }//入库人ID
         public DateTime? StockInTime { get; set; }//入库时间
+        public int? CancelStockInUserID { get; set; } // 撤销入库人ID
+        public DateTime? CancelStockInTime { get; set; } // 撤销入库时间
         public int? VoidUserID { get; set; }//作废人ID
         public DateTime? VoidTime { get; set; }//作废时间
     }

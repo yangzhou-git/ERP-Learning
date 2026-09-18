@@ -23,5 +23,6 @@
         public string UnitName { get; set; } = string.Empty;//单位名称
         public decimal ConversionRate { get; set; }//单位换算率
         public decimal BaseQuantity { get; set; }//基础单位数量
+        public bool IsDeleted { get; set; } // 是否删除
     }
 }
