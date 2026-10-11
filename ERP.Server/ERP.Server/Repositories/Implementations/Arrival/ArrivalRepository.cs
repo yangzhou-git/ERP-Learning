@@ -157,7 +157,7 @@ namespace ERP.Server.Repositories.Implementations
         public async Task<List<ArrivalListResponse>> GetArrivalListAsync(GetArrivalListRequest request, int companyID)
         {
             var skip = (request.Page - 1) * request.PageSize;
-            var sql = @"select a.ArrivalID, a.ArrivalCode, a.ArrivalStatus, s.SupplierName, l.LocationName, a.TotalAmount, a.ArrivalTime, u.CreateUserName, a.CreateTime
+            var sql = @"select a.ArrivalID, a.ArrivalCode, a.ArrivalStatus, s.SupplierName, l.LocationName, a.TotalAmount, a.ArrivalTime, u.UserName as CreateUserName, a.CreateTime
                         from Arrival a
                         join Supplier s on a.SupplierID = s.SupplierID
                         join Location l on a.LocationID = l.LocationID

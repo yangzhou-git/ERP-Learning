@@ -1,7 +1,10 @@
 using System.Data;
 using ERP.DbMigrator;
 using ERP.Server.Extensions;
+using ERP.Server.Filters;
+using ERP.Server.Validators.BusinessCodeSeed;
 using FluentMigrator.Runner;
+using FluentValidation;
 using Microsoft.Data.SqlClient;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +18,14 @@ var corsOrigins = builder.Configuration
     .Get<string[]>();
 // Add services to the container.
 
-builder.Services.AddControllers();
+// 注册 Controller 和全局验证过滤器
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<FluentValidationFilter>();
+});
+// 扫描并注册 Validator
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateBusinessCodeSeedRequestValidator>();
+// 注册数据库连接
 builder.Services.AddScoped<IDbConnection>(_ =>
 {
     return new SqlConnection(connectionString);
@@ -58,7 +68,5 @@ app.UseCors("VueCors");
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

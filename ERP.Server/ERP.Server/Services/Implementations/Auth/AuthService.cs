@@ -52,7 +52,13 @@ namespace ERP.Server.Services.Implementations.Auth
             var jwtKey = _configuration["Jwt:Key"];
             var jwtIssuer = _configuration["Jwt:Issuer"];
             var jwtAudience = _configuration["Jwt:Audience"];
-            var expireMinutes = _configuration.GetValue<int>("Jwt:ExpireMinutes");
+
+            // 计算北京时间次日零点
+            var chinaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Shanghai");
+            var chinaNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, chinaTimeZone);
+            var nextMidnight = chinaNow.Date.AddDays(1);
+            var expiresUtc = TimeZoneInfo.ConvertTimeToUtc(nextMidnight, chinaTimeZone);
+
             // 再使用配置创建签名密钥
             var securityKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey!)
@@ -65,7 +71,7 @@ namespace ERP.Server.Services.Implementations.Auth
                 issuer: jwtIssuer,
                 audience: jwtAudience,
                 claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(expireMinutes),
+                expires: expiresUtc,
                 signingCredentials: credentials
             );
             var token = new JwtSecurityTokenHandler().WriteToken(jwtToken);

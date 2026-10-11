@@ -4,8 +4,10 @@ using ERP.Server.Repositories.Implementations;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Implementations;
 using ERP.Server.Services.Implementations.Auth;
+using ERP.Server.Services.Implementations.BusinessCode;
 using ERP.Server.Services.Interfaces;
 using ERP.Server.Services.Interfaces.Arrival;
+using ERP.Server.Services.Interfaces.BusinessCode;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -28,7 +30,7 @@ namespace ERP.Server.Extensions
             services.AddScoped<IGoodsUnitRepository, GoodsUnitRepository>();
             services.AddScoped<IArrivalRepository, ArrivalRepository>();
             services.AddScoped<IInventoryRepository, InventoryRepository>();
-
+            services.AddScoped<IBusinessCodeSeedRepository, BusinessCodeSeedRepository>();
             return services;
         }
 
@@ -49,7 +51,7 @@ namespace ERP.Server.Extensions
             services.AddScoped<IGoodsUnitService, GoodsUnitService>();
             services.AddScoped<IArrivalService, ArrivalService>();
             services.AddScoped<IInventoryService, InventoryService>();
-
+            services.AddScoped<IBusinessCodeService, BusinessCodeService>();
             return services;
         }
 
@@ -92,8 +94,10 @@ namespace ERP.Server.Extensions
                             ValidateIssuerSigningKey = true,
                             ValidIssuer = jwtIssuer,
                             ValidAudience = jwtAudience,
-                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-                        };
+                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                            // 不允许额外的过期时间宽限
+                            ClockSkew = TimeSpan.Zero
+                    };
                 });
             services.AddAuthorization();
             return services;
