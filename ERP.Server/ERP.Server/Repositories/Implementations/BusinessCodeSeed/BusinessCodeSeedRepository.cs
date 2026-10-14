@@ -108,7 +108,8 @@ namespace ERP.Server.Repositories.Implementations
                             UpdateUserID = @UpdateUserID,
                             UpdateTime = getdate()
                         where BusinessCodeSeedID = @BusinessCodeSeedID
-                          and CompanyID = @companyID";
+                          and CompanyID = @companyID
+                          and HasBeenUsed = 0";
             return await _dbconnection.ExecuteAsync(sql, new
             {
                 companyID,

@@ -2,7 +2,7 @@ using System.Data;
 using ERP.DbMigrator;
 using ERP.Server.Extensions;
 using ERP.Server.Filters;
-using ERP.Server.Validators.BusinessCodeSeed;
+using ERP.Server.Validators.RequestValidators.BusinessCodeSeed;
 using FluentMigrator.Runner;
 using FluentValidation;
 using Microsoft.Data.SqlClient;

@@ -16,16 +16,19 @@ namespace ERP.Server.Repositories.Interfaces
         Task<bool> AddArrivalDetailsAsync(List<ArrivalDetail> arrivalDetails, IDbTransaction transaction);
         #endregion
         #region 根据商品单位关系ID查询GetGoodsUnitByIDAsync
-        Task<ArrivalGoodsUnitDto?> GetGoodsUnitByIDAsync(int goodsUnitID);
+        Task<ArrivalGoodsUnitDto?> GetGoodsUnitByIDAsync(int goodsUnitID, IDbTransaction transaction);
+        #endregion
+        #region 批量查询到货商品单位信息GetGoodsUnitsByIDsAsync
+        Task<List<ArrivalGoodsUnitDto>> GetGoodsUnitsByIDsAsync(List<int> goodsUnitIDs, IDbTransaction transaction);
         #endregion
         #region 查询当天最大到货单编码GetMaxArrivalCodeAsync
         Task<string?> GetMaxArrivalCodeAsync(string prefix, IDbTransaction transaction);
         #endregion
         #region 根据供应商ID查询供应商GetSupplierByIDAsync
-        Task<Supplier?> GetSupplierByIDAsync(int supplierID);
+        Task<Supplier?> GetSupplierByIDAsync(int supplierID, IDbTransaction transaction);
         #endregion
         #region 根据站点ID查询站点GetLocationByIDAsync
-        Task<Location?> GetLocationByIDAsync(int locationID);
+        Task<Location?> GetLocationByIDAsync(int locationID, int companyID, IDbTransaction transaction);
         #endregion
         #region 根据到货单ID查询到货单GetArrivalByIDAsync
         Task<Arrival?> GetArrivalByIDAsync(int arrivalID, int companyID);

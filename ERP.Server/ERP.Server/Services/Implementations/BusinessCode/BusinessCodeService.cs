@@ -42,7 +42,7 @@ namespace ERP.Server.Services.Implementations.BusinessCode
             } 
             else if (businessCodeSeed.ResetType == BusinessCodeResetType.Daily)
             {
-                if (businessCodeSeed.NumberDate == DateTime.Today) 
+                if (businessCodeSeed.NumberDate?.Date == DateTime.Today) 
                 {
                     businessCodeSeed.CurrentNumber++;
                 }

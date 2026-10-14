@@ -74,5 +74,13 @@ namespace ERP.Server.Controllers
             return await _arrivalService.CancelArrivalAuditAsync(request);
         }
         #endregion
+
+        #region 修改到货单UpdateArrival
+        [HttpPost]
+        public async Task<ApiResponse<bool>> UpdateArrival([FromBody] UpdateArrivalRequest request)
+        {
+            return await _arrivalService.UpdateArrivalAsync(request);
+        }
+        #endregion
     }
 }

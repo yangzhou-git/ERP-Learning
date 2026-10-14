@@ -10,6 +10,8 @@ using ERP.Server.Models.Response.Arrival;
 using ERP.Server.Repositories.Interfaces;
 using ERP.Server.Services.Interfaces;
 using ERP.Server.Services.Interfaces.Arrival;
+using ERP.Server.Services.Interfaces.BusinessCode;
+using FluentValidation;
 
 namespace ERP.Server.Services.Implementations
 {
@@ -19,160 +21,184 @@ namespace ERP.Server.Services.Implementations
         private readonly IDbConnection _dbConnection;
         private readonly ICurrentUserService _currentUserService;
         private readonly IInventoryRepository _inventoryRepository;
+        private readonly IBusinessCodeService _businessCodeService;
+        private readonly IValidator<AddArrivalRequest> _addArrivalValidator;
+        private readonly IValidator<UpdateArrivalRequest> _updateArrivalValidator;
 
-        public ArrivalService(IArrivalRepository arrivalRepository, IDbConnection dbConnection , ICurrentUserService currentUserService, IInventoryRepository inventoryRepository)
+        public ArrivalService(IArrivalRepository arrivalRepository, IDbConnection dbConnection , ICurrentUserService currentUserService, IInventoryRepository inventoryRepository, IBusinessCodeService businessCodeService, IValidator<AddArrivalRequest> addArrivalValidator, IValidator<UpdateArrivalRequest> updateArrivalValidator)
         {
             _arrivalRepository = arrivalRepository;
             _dbConnection = dbConnection;
             _currentUserService = currentUserService;
             _inventoryRepository = inventoryRepository;
+            _businessCodeService = businessCodeService;
+            _addArrivalValidator = addArrivalValidator;
+            _updateArrivalValidator = updateArrivalValidator;
         }
 
         #region 新增到货单AddArrivalAsync
         public async Task<ApiResponse<bool>> AddArrivalAsync(AddArrivalRequest request)
         {
-            if (request.ArrivalDetails == null || request.ArrivalDetails.Count == 0)
+            if(request == null)
             {
-                return ApiResponse<bool>.Error("到货明细不能为空");
+                return ApiResponse<bool>.Error("新增到货单请求不能为空");
             }
-            if(request.ArrivalTime.HasValue && request.ArrivalTime.Value > DateTime.Now)
+            var validationResult = await _addArrivalValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
             {
-                return ApiResponse<bool>.Error("实际到货时间不能晚于当前时间");
+                return ApiResponse<bool>.Error(validationResult.Errors[0].ErrorMessage);
             }
-            var supplier = await _arrivalRepository.GetSupplierByIDAsync(request.SupplierID);
-            if (supplier == null)
-            {
-                return ApiResponse<bool>.Error("此供应商不存在");
-            }
-            if(!supplier.IsActive)
-            {
-                return ApiResponse<bool>.Error("此供应商已停用");
-            }
-            var location = await _arrivalRepository.GetLocationByIDAsync(request.LocationID);
-            if (location == null)
-            {
-                return ApiResponse<bool>.Error("此站点不存在");
-            }
-            if (!location.IsActive)
-            {
-                return ApiResponse<bool>.Error("此站点已停用");
-            }
-            if(location.CompanyID != _currentUserService.CompanyID)
-            {
-                return ApiResponse<bool>.Error("此站点不属于当前公司");
-            }
-            var groups = request.ArrivalDetails.GroupBy(x => x.GoodsUnitID);
-            if (groups.Any(g => g.Count() > 1))
-            {
-                return ApiResponse<bool>.Error("到货明细中存在重复的商品单位关系");
-            }
-            var arrivalDetails = new List<ArrivalDetail>();
-            foreach (var detail in request.ArrivalDetails)
-            {
-                if (detail.Quantity <= 0)
-                {
-                    return ApiResponse<bool>.Error("到货数量必须大于0");
-                }
-                if (detail.Amount < 0)
-                {
-                    return ApiResponse<bool>.Error("到货金额不能小于0");
-                }
-                var goodsUnit = await _arrivalRepository.GetGoodsUnitByIDAsync(detail.GoodsUnitID);
-                if (goodsUnit == null)
-                {
-                    return ApiResponse<bool>.Error("商品单位关系不存在");
-                }
-                if (!goodsUnit.GoodsIsActive)
-                {
-                    return ApiResponse<bool>.Error("商品已停用");
-                }
-                if (!goodsUnit.UnitIsActive)
-                {
-                    return ApiResponse<bool>.Error("单位已停用");
-                }
-                if (!goodsUnit.GoodsUnitIsActive)
-                {
-                    return ApiResponse<bool>.Error("商品单位关系已停用");
-                }
-                if (goodsUnit.ConversionRate <= 0)
-                {
-                    return ApiResponse<bool>.Error("商品单位换算率必须大于0");
-                }
-                var baseQuantity = detail.Quantity * goodsUnit.ConversionRate;
-                var unitCost = detail.Amount / baseQuantity;
-                var arrivalDetail = new ArrivalDetail
-                {
-                    GoodsID = goodsUnit.GoodsID,
-                    GoodsUnitID = detail.GoodsUnitID,
-                    Quantity = detail.Quantity,
-                    UnitCost = unitCost,
-                    Amount = detail.Amount,
-                    Remark = detail.Remark,
-                    CreateUserID = _currentUserService.UserID,
-                    BarCode = goodsUnit.BarCode,
-                    GoodsCode = goodsUnit.GoodsCode,
-                    GoodsTitle = goodsUnit.GoodsTitle,
-                    GoodsSubTitle = goodsUnit.GoodsSubTitle,
-                    UnitID = goodsUnit.UnitID,
-                    UnitCode = goodsUnit.UnitCode,
-                    UnitName = goodsUnit.UnitName,
-                    ConversionRate = goodsUnit.ConversionRate,
-                    BaseQuantity = baseQuantity
-                };
-                arrivalDetails.Add(arrivalDetail);
-            }
-            var arrival = new Arrival
-            {
-                SupplierID = request.SupplierID,
-                CompanyID = _currentUserService.CompanyID,
-                LocationID = request.LocationID,
-                ArrivalStatus = ArrivalStatus.Pending,
-                ArrivalTime = request.ArrivalTime,
-                TotalAmount = arrivalDetails.Sum(x => x.Amount),
-                Remark = request.Remark,
-                CreateUserID = _currentUserService.UserID
-            };
-            if (_dbConnection.State != ConnectionState.Open)
+            var companyID = _currentUserService.CompanyID;
+            var createUserID = _currentUserService.UserID;
+            if(_dbConnection.State != ConnectionState.Open)
             {
                 _dbConnection.Open();
             }
             using var transaction = _dbConnection.BeginTransaction();
-            try {
-                    var prefix = "DH" + DateTime.Now.ToString("yyyyMMdd");
-                    var maxArrivalCode = await _arrivalRepository.GetMaxArrivalCodeAsync(prefix, transaction);
-                    int sequence;
-                    if (maxArrivalCode == null)
-                    {
-                        sequence = 1;
-                    }
-                    else
-                    {
-                        var sequenceText = maxArrivalCode.Substring(maxArrivalCode.Length - 4);
-                        sequence = int.Parse(sequenceText) + 1;
-                    }
-                    var sequenceCode = sequence.ToString("D4");
-                    var arrivalCode = prefix + sequenceCode;
-                    arrival.ArrivalCode = arrivalCode;
-
-                    var arrivalID = await _arrivalRepository.AddArrivalAsync(arrival, transaction);
-                    foreach (var arrivalDetail in arrivalDetails)
-                    {
-                        arrivalDetail.ArrivalID = arrivalID;
-                    }
-                    var detailResult = await _arrivalRepository.AddArrivalDetailsAsync(arrivalDetails, transaction);
-                    if (!detailResult)
-                    {
-                        transaction.Rollback();
-                        return ApiResponse<bool>.Error("新增到货明细失败");
-                    }
-                    transaction.Commit();
-                    return ApiResponse<bool>.Success(true, "新增到货单成功");
-                }catch
+            try
+            {
+                var supplier = await _arrivalRepository.GetSupplierByIDAsync(request.SupplierID, transaction);
+                if(supplier == null)
                 {
                     transaction.Rollback();
-                    throw;
+                    return ApiResponse<bool>.Error("供应商不存在，无法新增到货单");
                 }
+                if (!supplier.IsActive)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error($"供应商【{supplier.SupplierName}】已停用，无法新增到货单");
+                }
+                var location = await _arrivalRepository.GetLocationByIDAsync(request.LocationID, companyID, transaction);
+                if (location == null)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error("站点不存在或不属于当前公司，无法新增到货单");
+                }
+                if (!location.IsActive)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error($"站点【{location.LocationName}】已停用，无法新增到货单");
+                }
+                var arrivalDetails = new List<ArrivalDetail>();
+                List<int> goodsUnitIDs = request.ArrivalDetails.Select(x => x.GoodsUnitID).Distinct().ToList();
+                var goodsUnits = await _arrivalRepository.GetGoodsUnitsByIDsAsync(goodsUnitIDs, transaction);
+                foreach(var detail in request.ArrivalDetails)
+                {
+                    var goodsUnit = goodsUnits.FirstOrDefault(x => x.GoodsUnitID == detail.GoodsUnitID);
+                    if (goodsUnit == null)
+                    {
+                        transaction.Rollback();
+                        return ApiResponse<bool>.Error($"商品单位关系【{detail.GoodsUnitID}】不存在，无法新增到货单");
+                    }
+                    if (!goodsUnit.GoodsIsActive)
+                    {
+                        transaction.Rollback();
+                        return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsTitle}】已停用，无法新增到货单");
+                    }
+                    if (!goodsUnit.GoodsUnitIsActive)
+                    {
+                        transaction.Rollback();
+                        return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsTitle} - {goodsUnit.UnitName}】已停用，无法新增到货单");
+                    }
+                    if (!goodsUnit.UnitIsActive)
+                    {
+                        transaction.Rollback();
+                        return ApiResponse<bool>.Error($"单位【{goodsUnit.UnitName}】已停用，无法新增到货单");
+                    }
+                    if(goodsUnit.ConversionRate <= 0)
+                    {
+                        transaction.Rollback();
+                        return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsTitle} - {goodsUnit.UnitName}】的转换率必须大于0，无法新增到货单");
+                    }
+                    decimal baseQuantity = detail.Quantity * goodsUnit.ConversionRate;
+                    // ① 正向计算：数量 × 采购单位单价
+                    decimal calculatedAmount = Math.Round(detail.Quantity * detail.PurchaseUnitCost, 2, MidpointRounding.AwayFromZero);
+                    if(calculatedAmount != detail.Amount)
+                    {
+                        decimal calculatedPrice = Math.Round(detail.Amount / detail.Quantity, 6, MidpointRounding.AwayFromZero);
+                        decimal amountDifference = Math.Abs(calculatedAmount - detail.Amount);
+                        if (calculatedPrice != detail.PurchaseUnitCost || amountDifference > 0.01m)
+                        {
+                            transaction.Rollback();
+                            return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsTitle}】的金额计算不一致，请检查数量、采购单位单价和金额的关系，无法新增到货单");
+                        }
+                    }
+                    decimal unitCost = Math.Round(detail.Amount / baseQuantity, 6, MidpointRounding.AwayFromZero);
+                    var arrivalDetail = new ArrivalDetail
+                    {
+                        GoodsID = goodsUnit.GoodsID,
+                        GoodsUnitID = goodsUnit.GoodsUnitID,
+                        Quantity = detail.Quantity,
+                        PurchaseUnitCost = detail.PurchaseUnitCost,
+                        Amount = detail.Amount,
+                        BaseQuantity = baseQuantity,
+                        UnitCost = unitCost,
+                        BarCode = goodsUnit.BarCode,
+                        GoodsCode = goodsUnit.GoodsCode,
+                        GoodsTitle = goodsUnit.GoodsTitle,
+                        GoodsSubTitle = goodsUnit.GoodsSubTitle,
+                        UnitID = goodsUnit.UnitID,
+                        UnitCode = goodsUnit.UnitCode,
+                        UnitName = goodsUnit.UnitName,
+                        ConversionRate = goodsUnit.ConversionRate,
+                        Remark = detail.Remark,
+                        CreateUserID = createUserID
+                    };
+                    arrivalDetails.Add(arrivalDetail);
+                }
+                decimal totalAmount = arrivalDetails.Sum(x => x.Amount);
+                var codeResult = await _businessCodeService.GetNextCodeAsync(BusinessCodeType.Arrival, transaction);
+                if(codeResult == null)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error("到货单编号生成失败，无法新增到货单");
+                }
+                if(codeResult.Code != 200 || string.IsNullOrWhiteSpace(codeResult.Data))
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error(string.IsNullOrWhiteSpace(codeResult.Message) 
+                                                    ? "到货单编号生成失败或编号为空，无法新增到货单" 
+                                                    : $"到货单编号生成失败：{codeResult.Message}，无法新增到货单"
+                                                   );
+                }
+                var arrivalcode = codeResult.Data;
+                var arrival = new Arrival
+                {
+                    ArrivalCode = arrivalcode,
+                    SupplierID = supplier.SupplierID,
+                    CompanyID = companyID,
+                    LocationID = location.LocationID,
+                    ArrivalStatus = ArrivalStatus.Pending,
+                    ArrivalTime = request.ArrivalTime,
+                    TotalAmount = totalAmount,
+                    Remark = request.Remark,
+                    CreateUserID = createUserID
+                };
+                int arrivalID = await _arrivalRepository.AddArrivalAsync(arrival, transaction);
+                if(arrivalID <= 0)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error("到货单主表新增失败，无法新增到货单");
+                }
+                foreach(var detail in arrivalDetails)
+                {
+                    detail.ArrivalID = arrivalID;
+                }
+                var addDetailsResult = await _arrivalRepository.AddArrivalDetailsAsync(arrivalDetails, transaction);
+                if (!addDetailsResult)
+                {
+                    transaction.Rollback();
+                    return ApiResponse<bool>.Error("到货明细表新增失败，无法新增到货单");
+                }
+                transaction.Commit();
+                return ApiResponse<bool>.Success(true, "到货单新增成功");
             }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
         #endregion
 
         #region 查询到货单列表GetArrivalListAsync
@@ -510,6 +536,15 @@ namespace ERP.Server.Services.Implementations
         #region 修改到货单UpdateArrivalAsync
         public async Task<ApiResponse<bool>> UpdateArrivalAsync(UpdateArrivalRequest request)
         {
+            if (request == null)
+            {
+                return ApiResponse<bool>.Error("修改到货单请求不能为空");
+            }
+            var validationResult = await _updateArrivalValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+            {
+                return ApiResponse<bool>.Error(validationResult.Errors[0].ErrorMessage);
+            }
             var companyID = _currentUserService.CompanyID;
             var arrival = await _arrivalRepository.GetArrivalByIDAsync(request.ArrivalID, companyID);
             if(arrival == null)
@@ -520,10 +555,6 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Error($"到货单【{arrival.ArrivalCode}】当前状态不是未审核,无法修改到货单");
             }
-            if (request.ArrivalDetails == null || request.ArrivalDetails.Count == 0)
-            {
-                return ApiResponse<bool>.Error($"到货单【{arrival.ArrivalCode}】当前明细不能为空,无法修改到货单");
-            }
             var supplier = await _arrivalRepository.GetSupplierByIDAsync(request.SupplierID);
             if (supplier == null)
             {
@@ -532,10 +563,6 @@ namespace ERP.Server.Services.Implementations
             if (!supplier.IsActive)
             {
                 return ApiResponse<bool>.Error($"供应商【{supplier.SupplierName}】已停用,无法修改到货单");
-            }
-            if (request.ArrivalTime.HasValue && request.ArrivalTime.Value > DateTime.Now)
-            {
-                return ApiResponse<bool>.Error("实际到货时间不能晚于当前时间");
             }
             var location = await _arrivalRepository.GetLocationByIDAsync(request.LocationID);
             if(location == null)
@@ -550,22 +577,9 @@ namespace ERP.Server.Services.Implementations
             {
                 return ApiResponse<bool>.Error($"站点【{location.LocationName}】不属于当前公司,无法修改到货单");
             }
-            var groups = request.ArrivalDetails.GroupBy(x => x.GoodsUnitID);
-            if (groups.Any(g => g.Count() > 1))
-            {
-                return ApiResponse<bool>.Error("到货明细中存在重复的商品单位关系");
-            }
             var arrivalDetails = new List<ArrivalDetail>();
             foreach (var detail in request.ArrivalDetails) 
             {
-                if (detail.Quantity <= 0)
-                {
-                    return ApiResponse<bool>.Error("到货数量必须大于0");
-                }
-                if (detail.Amount < 0)
-                {
-                    return ApiResponse<bool>.Error("到货金额不能小于0");
-                }
                 var goodsUnit = await _arrivalRepository.GetGoodsUnitByIDAsync(detail.GoodsUnitID);
                 if (goodsUnit == null)
                 {

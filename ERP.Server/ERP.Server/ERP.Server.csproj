@@ -20,4 +20,8 @@
     <ProjectReference Include="..\ERP.DbMigrator\ERP.DbMigrator.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Validators\DatabaseValidators\" />
+  </ItemGroup>
+
 </Project>

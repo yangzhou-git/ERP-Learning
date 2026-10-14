@@ -48,14 +48,24 @@ namespace ERP.Server.Repositories.Implementations
         public async Task<bool> AddArrivalDetailsAsync(List<ArrivalDetail> arrivalDetails, IDbTransaction transaction)
         {
             var sql = @"insert into ArrivalDetail
-                        (ArrivalID, GoodsID, GoodsUnitID, Quantity, UnitCost, Amount, Remark, CreateUserID, CreateTime, BarCode, GoodsCode, GoodsTitle, GoodsSubTitle, UnitID, UnitCode, UnitName, ConversionRate, BaseQuantity)
-                  values(@ArrivalID, @GoodsID, @GoodsUnitID, @Quantity, @UnitCost, @Amount, @Remark, @CreateUserID, getdate(), @BarCode, @GoodsCode, @GoodsTitle, @GoodsSubTitle, @UnitID, @UnitCode, @UnitName, @ConversionRate, @BaseQuantity)";
+                        (ArrivalID, GoodsID, GoodsUnitID,
+                         Quantity, PurchaseUnitCost, UnitCost, Amount,
+                         Remark, CreateUserID, CreateTime,
+                         BarCode, GoodsCode, GoodsTitle, GoodsSubTitle,
+                         UnitID, UnitCode, UnitName, ConversionRate, BaseQuantity)
+                        values
+                        (@ArrivalID, @GoodsID, @GoodsUnitID,
+                         @Quantity, @PurchaseUnitCost, @UnitCost, @Amount,
+                         @Remark, @CreateUserID, getdate(),
+                         @BarCode, @GoodsCode, @GoodsTitle, @GoodsSubTitle,
+                         @UnitID, @UnitCode, @UnitName, @ConversionRate, @BaseQuantity)";
             var parameters = arrivalDetails.Select(arrivalDetail => new
             {
                 ArrivalID = arrivalDetail.ArrivalID,
                 GoodsID = arrivalDetail.GoodsID,
                 GoodsUnitID = arrivalDetail.GoodsUnitID,
                 Quantity = arrivalDetail.Quantity,
+                PurchaseUnitCost = arrivalDetail.PurchaseUnitCost,
                 UnitCost = arrivalDetail.UnitCost,
                 Amount = arrivalDetail.Amount,
                 Remark = arrivalDetail.Remark,
@@ -76,7 +86,7 @@ namespace ERP.Server.Repositories.Implementations
         #endregion
 
         #region 根据商品单位关系ID查询GetGoodsUnitByIDAsync
-        public async Task<ArrivalGoodsUnitDto?> GetGoodsUnitByIDAsync(int goodsUnitID)
+        public async Task<ArrivalGoodsUnitDto?> GetGoodsUnitByIDAsync(int goodsUnitID, IDbTransaction transaction)
         {
             var sql = @"select 
                         gu.GoodsUnitID,
@@ -92,12 +102,42 @@ namespace ERP.Server.Repositories.Implementations
                         u.UnitCode,
                         u.UnitName,
                         u.IsActive as UnitIsActive
-                    from GoodsUnit gu
-                    join Goods g on gu.GoodsID = g.GoodsID
-                    join Unit u on gu.UnitID = u.UnitID
+                    from GoodsUnit gu with (holdlock)
+                    join Goods g with (holdlock) on gu.GoodsID = g.GoodsID
+                    join Unit u with (holdlock) on gu.UnitID = u.UnitID
                     where gu.GoodsUnitID = @goodsUnitID";
-            var result = await _dbConnection.QueryFirstOrDefaultAsync<ArrivalGoodsUnitDto>(sql, new { goodsUnitID });
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<ArrivalGoodsUnitDto>(sql, new { goodsUnitID }, transaction);
             return result;
+        }
+        #endregion
+
+        #region 批量查询到货商品单位信息GetGoodsUnitsByIDsAsync
+        public async Task<List<ArrivalGoodsUnitDto>> GetGoodsUnitsByIDsAsync(List<int> goodsUnitIDs, IDbTransaction transaction)
+        {
+            if (goodsUnitIDs == null || goodsUnitIDs.Count == 0)
+            {
+                return new List<ArrivalGoodsUnitDto>();
+            }
+            var sql = @"select 
+                        gu.GoodsUnitID,
+                        gu.GoodsID,
+                        gu.UnitID,
+                        gu.ConversionRate,
+                        gu.IsActive as GoodsUnitIsActive,
+                        g.BarCode,
+                        g.GoodsCode,
+                        g.GoodsTitle,
+                        g.GoodsSubTitle,
+                        g.IsActive as GoodsIsActive,
+                        u.UnitCode,
+                        u.UnitName,
+                        u.IsActive as UnitIsActive
+                    from GoodsUnit gu with (holdlock)
+                    join Goods g with (holdlock) on gu.GoodsID = g.GoodsID
+                    join Unit u with (holdlock) on gu.UnitID = u.UnitID
+                    where gu.GoodsUnitID in @goodsUnitIDs";
+            var result = await _dbConnection.QueryAsync<ArrivalGoodsUnitDto>(sql, new { goodsUnitIDs }, transaction);
+            return result.ToList();
         }
         #endregion
 
@@ -111,19 +151,19 @@ namespace ERP.Server.Repositories.Implementations
         #endregion
 
         #region 根据供应商ID查询供应商GetSupplierByIDAsync
-        public async Task<Supplier?> GetSupplierByIDAsync(int supplierID)
+        public async Task<Supplier?> GetSupplierByIDAsync(int supplierID, IDbTransaction transaction)
         {
-            var sql = @"select * from Supplier where SupplierID = @supplierID";
-            var result = await _dbConnection.QueryFirstOrDefaultAsync<Supplier>(sql, new { supplierID });
+            var sql = @"select * from Supplier with (holdlock) where SupplierID = @supplierID";
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<Supplier>(sql, new { supplierID }, transaction);
             return result;
         }
         #endregion
 
         #region 根据站点ID查询站点GetLocationByIDAsync
-        public async Task<Location?> GetLocationByIDAsync(int locationID)
+        public async Task<Location?> GetLocationByIDAsync(int locationID, int companyID, IDbTransaction transaction)
         {
-            var sql = @"select * from Location where LocationID = @locationID";
-            var result = await _dbConnection.QueryFirstOrDefaultAsync<Location>(sql, new { locationID });
+            var sql = @"select * from Location with (holdlock) where CompanyID = @companyID and LocationID = @locationID";
+            var result = await _dbConnection.QueryFirstOrDefaultAsync<Location>(sql, new { locationID, companyID }, transaction);
             return result;
         }
         #endregion

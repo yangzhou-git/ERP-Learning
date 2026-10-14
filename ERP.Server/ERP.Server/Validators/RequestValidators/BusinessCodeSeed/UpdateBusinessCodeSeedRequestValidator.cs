@@ -1,7 +1,7 @@
 ﻿using FluentValidation;
 using ERP.Server.Models.Request.BusinessCodeSeed;
 
-namespace ERP.Server.Validators.BusinessCodeSeed
+namespace ERP.Server.Validators.RequestValidators.BusinessCodeSeed
 {
     public class UpdateBusinessCodeSeedRequestValidator : AbstractValidator<UpdateBusinessCodeSeedRequest>
     {
