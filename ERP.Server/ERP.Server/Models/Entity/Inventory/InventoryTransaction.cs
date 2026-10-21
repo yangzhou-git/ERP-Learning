@@ -29,6 +29,8 @@ namespace ERP.Server.Models.Entity.InventoryTransaction
         public decimal BeforeAverageCost { get; set; } // 变动前平均成本
         public decimal AfterAverageCost { get; set; } // 变动后平均成本
 
+        public int? ReversalOfTransactionID { get; set; } // 被撤销的原始库存流水ID，普通流水为NULL，撤销流水记录原始流水ID
+
         public string? Remark { get; set; } // 备注
         public int CreateUserID { get; set; } // 创建人ID
         public DateTime CreateTime { get; set; } // 创建时间
