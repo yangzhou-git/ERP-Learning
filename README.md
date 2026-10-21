@@ -1,132 +1,114 @@
-# ERP-Learning
+# ERP-Learning｜ERP 全栈学习与实践项目
 
-一个用于学习全栈开发的 ERP 管理系统项目。
+基于 **Vue 3 + ASP.NET Core Web API + SQL Server** 开发的 ERP（企业资源计划）管理系统，围绕基础资料、到货单、库存管理与业务编号等真实业务场景，持续练习从数据库设计、后端接口到前端交互的完整开发流程。
+
+> **项目状态：持续开发中**。这是个人学习与实践项目，重点是理解业务规则、事务一致性、并发控制及分层设计，不是已经完成商业化交付的 ERP 产品。
 
 ## 技术栈
 
-- 前端：Vue 3 + Vite + Element Plus + Vue Router + Axios
-- 后端：ASP.NET Core + Dapper
-- 数据库：SQL Server
+| 方向 | 使用技术 |
+| --- | --- |
+| 前端 | Vue 3、Vite、Element Plus、Vue Router、Axios |
+| 后端 | C#、ASP.NET Core Web API、依赖注入（DI） |
+| 数据访问 | Dapper（目前主要使用）、EF Core（前期学习实践） |
+| 数据库 | SQL Server |
+| 数据库迁移 | FluentMigrator |
+| 身份认证 | JWT、ASP.NET Core Authentication / Authorization |
+| 参数校验 | FluentValidation、全局 Action Filter |
+| 缓存 | Redis |
 
-## 项目结构
+## 项目功能与进度
 
-- ERP.Server：ASP.NET Core 后端项目
-- Vue3：Vue 3 前端项目
-- Database：数据库初始化脚本
+| 模块 | 功能范围 | 当前进度 |
+| --- | --- | --- |
+| 用户与身份认证 | 登录、JWT 签发与接口鉴权 | 已实现基础流程 |
+| 基础资料 | 商品、商品分类、供应商、站点、单位及商品单位换算 | 已实现主要管理功能 |
+| 列表与分页 | 查询条件、分页、状态筛选及公共分页参数 | 已在多个模块应用 |
+| 业务编号 | 按公司及业务类型维护规则、流水号生成、按日重置或累计、并发取号 | 已实现主要后端逻辑 |
+| 到货单 | 新增、修改、列表、详情、审核与反审核 | 已实现主要后端逻辑，持续复核中 |
+| 到货入库 | 到货明细换算、库存数量与成本更新、库存流水记录 | 已实现主要后端逻辑，持续复核中 |
+| 撤销入库 | 关联原始入库流水、反向库存流水、防止重复撤销 | 开发与测试中，历史成本重算尚待完善 |
+| 到货单前端 | 列表筛选、明细表格行内编辑、数量/单价/金额联动 | 列表已有初稿，完整交互待完成 |
 
-## 已完成功能
+> 以上是开发进度说明，不代表所有模块都已完成自动化测试、压力测试或生产环境验证。
 
-- 用户管理
-- 商品管理
-- 商品分类管理
-- 供应商管理
-- 公司管理
-- 站点管理
-- 地区数据管理
+## 重点业务设计
 
-## 开发计划
+### 1. 到货单与库存流水
 
-- JWT 身份认证
-- Redis 缓存
-- 仓库管理
-- 到货单管理
-- 库存管理
+- 到货单采用**主表 + 明细表**结构，包含未审核、审核、入库及相关逆向业务操作。
+- 到货单位通过换算率转换为库存使用的**基础单位数量**。
+- 区分 **采购单位单价 `PurchaseUnitCost`** 与 **基础单位成本 `UnitCost`**，便于处理“箱、瓶”等不同计量单位。
+- 入库时在事务中更新库存，并新增 `InventoryTransaction` 库存流水，记录变更前后数量、金额与平均成本。
+- 库存成本采用**移动加权平均**思路；对历史入库撤销后影响后续出库成本的情况，正在完善重算规则。
 
-## 运行环境
+### 2. 业务编号
 
-- .NET
-- Node.js
-- SQL Server
+- 使用 `BusinessCodeSeed` 管理不同业务类型的编号规则。
+- 支持按日重置（Daily）与连续累计（Never）两种规则。
+- 通过数据库事务和锁定读处理并发取号，避免重复业务编号。
+- 使用 `HasBeenUsed` 限制已投入使用的关键编号规则被随意修改。
 
-## 项目配置
+### 3. 分层结构与通用能力
 
-### 前端配置
+后端按照 **Controller → Service → Repository → SQL Server** 的职责划分组织业务代码：
 
-复制 `Vue3/.env.example` 并创建 `.env.development` 文件，然后配置后端 API 地址：
+- **Controller**：接收 HTTP 请求并返回统一响应。
+- **Service**：负责业务校验、状态流转、事务边界和成本计算。
+- **Repository**：通过 Dapper 执行 SQL，完成数据查询与持久化。
+- **Validator / Filter**：统一处理请求参数基础校验。
 
-```env
-VITE_API_BASE_URL=https://localhost:xxxx/api
-```
+项目使用 `ApiResponse<T>` 与 `PageResponse<T>` 统一返回结构，并在业务处理中持续完善 `CompanyID` 数据隔离、事务及并发控制。
 
-其中 `xxxx` 请修改为本地 ASP.NET Core 后端实际运行的端口。
-
-### 后端配置
-
-数据库连接字符串不保存在 Git 仓库中，请使用 .NET User Secrets 配置。
-
-在 `ERP.Server/ERP.Server` 项目中配置 `ConnectionStrings:DefaultConnection`：
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "你的 SQL Server 连接字符串"
-  }
-}
-```
-
-请根据本地 SQL Server 环境配置服务器地址、数据库名称、用户名和密码等信息。
-
-## 数据库初始化
-
-数据库初始化脚本位于：
+## 仓库结构
 
 ```text
-Database/ERP.Database.sql
+ERP-Learning/
+├── Database/                  # 数据库相关脚本
+├── ERP.Server/                # ASP.NET Core 后端解决方案
+│   └── ERP.Server/
+│       ├── Controllers/       # 接口控制器
+│       ├── Services/          # 业务逻辑
+│       ├── Repositories/      # 数据访问
+│       ├── Models/            # 实体、请求、响应、枚举等
+│       ├── Validators/        # 参数校验
+│       ├── Filters/           # 过滤器
+│       ├── Extensions/        # 服务注册等扩展
+│       └── Program.cs         # 应用入口
+├── Vue3/                      # Vue 前端代码
+├── .gitignore
+└── README.md
 ```
 
-在 SQL Server 中执行该脚本即可创建 `ERP_DB` 数据库及项目所需的数据表。
+## 本地运行说明
 
-当前初始化脚本主要用于首次创建数据库结构，不包含本地测试数据。
+本项目目前主要用于本地开发和调试，**尚未提供正式线上演示地址**。
 
-## 安装与启动
+1. 安装相应版本的 .NET SDK、Node.js、SQL Server，并根据需要准备 Redis。
+2. 在本地设置 SQL Server 连接字符串及 JWT 签名密钥；**不要将真实密码或密钥提交到仓库**。仓库中的 `appsettings.json` 仅保留非敏感配置及空白占位值。
+3. 根据后端项目配置运行数据库迁移，并启动 ASP.NET Core Web API。
+4. 进入 `Vue3` 下**包含 `package.json` 的前端项目目录**，安装依赖并启动开发服务器：
 
-### 1. 安装前端依赖
+   ```bash
+   npm install
+   npm run dev
+   ```
 
-进入 `Vue3` 目录：
+5. 确认前端 API 地址、后端 CORS 允许的来源及数据库环境设置一致。
 
-```bash
-cd Vue3
-npm install
-```
+> 数据库初始化脚本、配置项与启动步骤将随项目开发继续补充；当前不保证零配置即可运行。
 
-### 2. 配置前端环境
+## 后续计划
 
-根据 `Vue3/.env.example` 创建 `.env.development`，并配置自己的后端 API 地址。
+- [ ] 完善撤销入库后的历史库存流水与成本重算，并补充核心业务测试。
+- [ ] 完成到货单前端表格行内编辑和前后端完整联调。
+- [ ] 补强租户隔离、统一异常处理、真实 HTTP 状态码与结构化日志。
+- [ ] 完善库存并发、幂等、防重复提交、批量查询优化等工程能力。
+- [ ] 在本地结合真实业务引入 RabbitMQ，实践可靠消息、重试与幂等处理。
+- [ ] 完善可靠性验证后，再学习 Linux / Docker / Nginx 和云服务器部署。
 
-### 3. 初始化数据库
+## 项目说明
 
-在 SQL Server 中执行：
+本仓库记录个人从基础功能到复杂业务场景的持续学习过程。部分功能仍处于迭代阶段，欢迎通过 Issue 交流技术实现和改进建议。
 
-```text
-Database/ERP.Database.sql
-```
-
-创建 `ERP_DB` 数据库及相关数据表。
-
-### 4. 配置后端数据库连接
-
-使用 .NET User Secrets 配置：
-
-```text
-ConnectionStrings:DefaultConnection
-```
-
-### 5. 启动后端
-
-使用 Visual Studio 打开：
-
-```text
-ERP.Server/ERP.Server.slnx
-```
-
-启动 ASP.NET Core 项目。
-
-### 6. 启动前端
-
-进入 `Vue3` 目录并执行：
-
-```bash
-npm run dev
-```
-
-根据终端输出的本地地址访问 ERP 前端项目。
+**最近更新：2026-10-20**
