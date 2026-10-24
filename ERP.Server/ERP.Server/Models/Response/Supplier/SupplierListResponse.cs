@@ -3,6 +3,7 @@
     public class SupplierListResponse
     {
         public int SupplierID { get; set; }
+        public string SupplierCode { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
         public string? Contact { get; set; }
         public string? Phone { get; set; }

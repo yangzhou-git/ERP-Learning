@@ -1,4 +1,5 @@
-﻿using ERP.Server.Models.Entity;
+﻿using System.Data;
+using ERP.Server.Models.Entity;
 using ERP.Server.Models.Request;
 
 namespace ERP.Server.Repositories.Interfaces
@@ -6,7 +7,7 @@ namespace ERP.Server.Repositories.Interfaces
     public interface ISupplierRepository
     {
         #region 新增供应商AddSupplierAsync
-        Task<bool> AddSupplierAsync(Supplier supplier);
+        Task<bool> AddSupplierAsync(Supplier supplier, IDbTransaction transaction);
         #endregion
         #region 查询供应商列表GetSupplierListAsync
         Task<List<Supplier>> GetSupplierListAsync(GetSupplierListRequest request);

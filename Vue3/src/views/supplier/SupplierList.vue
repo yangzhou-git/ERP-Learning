@@ -12,6 +12,7 @@
         <div class="table-box">
             <el-table :data="SupplierList">
                 <el-table-column label="ID" prop="supplierID"></el-table-column>
+                <el-table-column label= "供应商编号" prop="supplierCode"></el-table-column>
                 <el-table-column label="供应商名称" prop="supplierName"></el-table-column>
                 <el-table-column label="联系人" prop="contact"></el-table-column>
                 <el-table-column label="电话" prop="phone"></el-table-column>

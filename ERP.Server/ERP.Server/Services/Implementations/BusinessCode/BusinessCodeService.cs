@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using ERP.Server.Common;
 using ERP.Server.Models.Entity.BusinessCodeSeed;
 using ERP.Server.Models.Enums;
@@ -89,16 +90,17 @@ namespace ERP.Server.Services.Implementations.BusinessCode
             {
                 return ApiResponse<bool>.Error(validationResult.Errors[0].ErrorMessage);
             }
-            if (_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try{
                 var businessCodeSeed = await _businessCodeSeedRepository.GetBusinessCodeSeedForUpdateAsync(companyID, request.BusinessType, transaction);
                 if (businessCodeSeed != null)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("当前公司已配置该业务编号规则,无法重复添加");
                 }
                 var newBusinessCodeSeed = new BusinessCodeSeed
@@ -115,15 +117,15 @@ namespace ERP.Server.Services.Implementations.BusinessCode
                 var result = await _businessCodeSeedRepository.AddBusinessCodeSeedAsync(newBusinessCodeSeed, transaction);
                 if(!result)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("新增业务编号规则失败");
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, "新增业务编号规则成功");
             }
             catch
             {                
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
@@ -139,17 +141,18 @@ namespace ERP.Server.Services.Implementations.BusinessCode
             {
                 return ApiResponse<bool>.Error(updateValidationResult.Errors[0].ErrorMessage);
             }
-            if (_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try 
             { 
                 var originalSeed = await _businessCodeSeedRepository.GetBusinessCodeSeedByIDForUpdateAsync(request.BusinessCodeSeedID, companyID, transaction);
                 if (originalSeed == null) 
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("当前公司未配置该业务编号规则,无法修改");
                 }
                 if (originalSeed.HasBeenUsed &&
@@ -158,7 +161,7 @@ namespace ERP.Server.Services.Implementations.BusinessCode
                      originalSeed.NumberLength != request.NumberLength ||
                      originalSeed.ResetType != request.ResetType))
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("当前业务编号规则已被使用,无法修改关键配置");
                 }
                 if (originalSeed.BusinessType != request.BusinessType)
@@ -166,7 +169,7 @@ namespace ERP.Server.Services.Implementations.BusinessCode
                     var targetSeed = await _businessCodeSeedRepository.GetBusinessCodeSeedForUpdateAsync(companyID, request.BusinessType, transaction);
                     if (targetSeed != null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error("当前公司已配置该业务编号规则,无法修改");
                     }
                 }
@@ -180,12 +183,12 @@ namespace ERP.Server.Services.Implementations.BusinessCode
                 {
                     return ApiResponse<bool>.Error("业务编号规则更新失败,无法修改");
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, "业务编号规则修改成功");
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }

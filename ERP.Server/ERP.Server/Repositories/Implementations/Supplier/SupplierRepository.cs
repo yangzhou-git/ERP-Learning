@@ -16,20 +16,21 @@ namespace ERP.Server.Repositories.Implementations
         }
 
         #region 新增供应商AddSupplierAsync
-        public async Task<bool> AddSupplierAsync(Supplier supplier)
+        public async Task<bool> AddSupplierAsync(Supplier supplier, IDbTransaction transaction)
         {
             var sql = @"insert into Supplier
-                        (SupplierName,Contact,Phone,Address,Remark,IsActive,CreateTime)
+                        (SupplierCode,SupplierName,Contact,Phone,Address,Remark,IsActive,CreateTime)
                         values
-                        (@SupplierName,@Contact,@Phone,@Address,@Remark,1,getdate())";
+                        (@SupplierCode,@SupplierName,@Contact,@Phone,@Address,@Remark,1,getdate())";
             var result = await _dbConnection.ExecuteAsync(sql, new
             {
+                SupplierCode = supplier.SupplierCode,
                 SupplierName = supplier.SupplierName,
                 Contact = supplier.Contact,
                 Phone = supplier.Phone,
                 Address = supplier.Address,
                 Remark = supplier.Remark
-            });
+            }, transaction);
             return result > 0;
         }
         #endregion
@@ -38,6 +39,7 @@ namespace ERP.Server.Repositories.Implementations
         {
             var skip = (request.Page - 1) * request.PageSize;
             var sql = @"select SupplierID,
+                               SupplierCode,
                                SupplierName,
                                Contact,
                                Phone,

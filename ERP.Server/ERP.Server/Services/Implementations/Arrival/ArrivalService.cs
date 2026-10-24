@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 using ERP.Server.Common;
 using ERP.Server.Common.Helpers;
 using ERP.Server.Models.Entity;
@@ -51,33 +52,34 @@ namespace ERP.Server.Services.Implementations
             }
             var companyID = _currentUserService.CompanyID;
             var createUserID = _currentUserService.UserID;
-            if(_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try
             {
                 var supplier = await _arrivalRepository.GetSupplierByIDAsync(request.SupplierID, transaction);
                 if(supplier == null)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("供应商不存在，无法新增到货单");
                 }
                 if (!supplier.IsActive)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"供应商【{supplier.SupplierName}】已停用，无法新增到货单");
                 }
                 var location = await _arrivalRepository.GetLocationByIDAsync(request.LocationID, companyID, transaction);
                 if (location == null)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("站点不存在或不属于当前公司，无法新增到货单");
                 }
                 if (!location.IsActive)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"站点【{location.LocationName}】已停用，无法新增到货单");
                 }
                 var arrivalDetails = new List<ArrivalDetail>();
@@ -88,27 +90,27 @@ namespace ERP.Server.Services.Implementations
                     var goodsUnit = goodsUnits.FirstOrDefault(x => x.GoodsUnitID == detail.GoodsUnitID);
                     if (goodsUnit == null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{detail.GoodsUnitID}】不存在，无法新增到货单");
                     }
                     if (!goodsUnit.GoodsIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsTitle}】已停用，无法新增到货单");
                     }
                     if (!goodsUnit.GoodsUnitIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsTitle} - {goodsUnit.UnitName}】已停用，无法新增到货单");
                     }
                     if (!goodsUnit.UnitIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"单位【{goodsUnit.UnitName}】已停用，无法新增到货单");
                     }
                     if(goodsUnit.ConversionRate <= 0)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsTitle} - {goodsUnit.UnitName}】的转换率必须大于0，无法新增到货单");
                     }
                     decimal baseQuantity = detail.Quantity * goodsUnit.ConversionRate;
@@ -120,7 +122,7 @@ namespace ERP.Server.Services.Implementations
                         decimal amountDifference = Math.Abs(calculatedAmount - detail.Amount);
                         if (calculatedPrice != detail.PurchaseUnitCost || amountDifference > 0.01m)
                         {
-                            transaction.Rollback();
+                            await transaction.RollbackAsync();
                             return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsTitle}】的金额计算不一致，请检查数量、采购单位单价和金额的关系，无法新增到货单");
                         }
                     }
@@ -151,12 +153,12 @@ namespace ERP.Server.Services.Implementations
                 var codeResult = await _businessCodeService.GetNextCodeAsync(BusinessCodeType.Arrival, transaction);
                 if(codeResult == null)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("到货单编号生成失败，无法新增到货单");
                 }
                 if(codeResult.Code != 200 || string.IsNullOrWhiteSpace(codeResult.Data))
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error(string.IsNullOrWhiteSpace(codeResult.Message) 
                                                     ? "到货单编号生成失败或编号为空，无法新增到货单" 
                                                     : $"到货单编号生成失败：{codeResult.Message}，无法新增到货单"
@@ -178,7 +180,7 @@ namespace ERP.Server.Services.Implementations
                 int arrivalID = await _arrivalRepository.AddArrivalAsync(arrival, transaction);
                 if(arrivalID <= 0)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("到货单主表新增失败，无法新增到货单");
                 }
                 foreach(var detail in arrivalDetails)
@@ -188,15 +190,15 @@ namespace ERP.Server.Services.Implementations
                 var addDetailsResult = await _arrivalRepository.AddArrivalDetailsAsync(arrivalDetails, transaction);
                 if (!addDetailsResult)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("到货明细表新增失败，无法新增到货单");
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, "到货单新增成功");
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
@@ -272,11 +274,12 @@ namespace ERP.Server.Services.Implementations
         public async Task<ApiResponse<bool>> StockInArrivalAsync(StockInArrivalRequest request)
         {
             var companyID = _currentUserService.CompanyID;
-            if(_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try
             {
                 var arrival = await _arrivalRepository.GetArrivalForUpdateAsync(request.ArrivalID, companyID, transaction);
@@ -391,12 +394,12 @@ namespace ERP.Server.Services.Implementations
                 {
                     return ApiResponse<bool>.Error($"到货单【{arrival.ArrivalCode}】状态修改失败,无法入库");
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, $"到货单【{arrival.ArrivalCode}】入库成功");
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
@@ -406,11 +409,12 @@ namespace ERP.Server.Services.Implementations
         public async Task<ApiResponse<bool>> CancelStockInArrivalAsync(CancelStockInArrivalRequest request)
         {
             var companyID = _currentUserService.CompanyID;
-            if (_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try
             {
                 var arrival = await _arrivalRepository.GetArrivalForUpdateAsync(request.ArrivalID, companyID, transaction);
@@ -425,7 +429,7 @@ namespace ERP.Server.Services.Implementations
                 var arrivalDetails = await _arrivalRepository.GetArrivalDetailsByArrivalIDAsync(request.ArrivalID, transaction);
                 if (arrivalDetails == null || arrivalDetails.Count == 0)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"到货单【{arrival.ArrivalCode}】明细不存在,无法撤销入库");
                 }
                 foreach (var detail in arrivalDetails)
@@ -433,13 +437,13 @@ namespace ERP.Server.Services.Implementations
                     var inventory = await _inventoryRepository.GetInventoryAsync(companyID, arrival.LocationID, detail.GoodsID, arrival.SupplierID, transaction);
                     if (inventory == null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品【{detail.GoodsTitle}】库存不存在,无法撤销入库");
                     }
                     var inventoryTransaction = await _inventoryRepository.GetArrivalStockInTransactionAsync(arrival.ArrivalID, detail.ArrivalDetailID, companyID, InventoryTransactionType.ArrivalStockIn, transaction);
                     if (inventoryTransaction == null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品【{detail.GoodsTitle}】库存流水不存在,无法撤销入库");
                     }
                     var subsequentTransactions = await _inventoryRepository.GetSubsequentInventoryTransactionsAsync(inventory.InventoryID, companyID, inventoryTransaction.InventoryTransactionID, transaction);
@@ -703,12 +707,12 @@ namespace ERP.Server.Services.Implementations
                         }
                     }
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, $"到货单【{arrival.ArrivalCode}】撤销入库成功");
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }
@@ -749,22 +753,23 @@ namespace ERP.Server.Services.Implementations
                 return ApiResponse<bool>.Error(validationResult.Errors[0].ErrorMessage);
             }
             var companyID = _currentUserService.CompanyID;
-            if (_dbConnection.State != ConnectionState.Open)
+            var DbConnection = (DbConnection)_dbConnection;
+            if (DbConnection.State != ConnectionState.Open)
             {
-                _dbConnection.Open();
+                await DbConnection.OpenAsync();
             }
-            using var transaction = _dbConnection.BeginTransaction();
+            await using var transaction = await DbConnection.BeginTransactionAsync();
             try
             {
                 var currentArrival = await _arrivalRepository.GetArrivalForUpdateAsync(request.ArrivalID, companyID, transaction);
                 if (currentArrival == null)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error("到货单数据已发生变化,请刷新后重试");
                 }
                 if (currentArrival.ArrivalStatus != ArrivalStatus.Pending)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"到货单【{currentArrival.ArrivalCode}】当前状态不是未审核，无法修改到货单");
                 }
                 var supplier = await _arrivalRepository.GetSupplierByIDAsync(request.SupplierID, transaction);
@@ -797,27 +802,27 @@ namespace ERP.Server.Services.Implementations
                     var goodsUnit = goodsUnits.FirstOrDefault(x => x.GoodsUnitID == detail.GoodsUnitID);
                     if (goodsUnit == null)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{detail.GoodsUnitID}】不存在，无法修改到货单");
                     }
                     if (!goodsUnit.GoodsIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsCode}】已停用，无法修改到货单");
                     }
                     if (!goodsUnit.UnitIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"单位【{goodsUnit.UnitCode}】已停用，无法修改到货单");
                     }
                     if (!goodsUnit.GoodsUnitIsActive)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsUnitID}】已停用，无法修改到货单");
                     }
                     if (goodsUnit.ConversionRate <= 0)
                     {
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         return ApiResponse<bool>.Error($"商品单位关系【{goodsUnit.GoodsUnitID}】换算率必须大于0，无法修改到货单");
                     }
                     decimal calculatedAmount = Math.Round(detail.Quantity * detail.PurchaseUnitCost, 2, MidpointRounding.AwayFromZero);
@@ -826,7 +831,7 @@ namespace ERP.Server.Services.Implementations
                         decimal calculatedPrice = Math.Round(detail.Amount / detail.Quantity, 6, MidpointRounding.AwayFromZero);
                         if(calculatedPrice != detail.PurchaseUnitCost || Math.Abs(calculatedAmount - detail.Amount) > 0.01m)
                         {
-                            transaction.Rollback();
+                            await transaction.RollbackAsync();
                             return ApiResponse<bool>.Error($"商品【{goodsUnit.GoodsCode}】的金额计算不一致，请检查数量、采购单位单价和金额的关系，无法修改到货单");
                         }
                     }
@@ -869,27 +874,27 @@ namespace ERP.Server.Services.Implementations
                 var updateResult = await _arrivalRepository.UpdateArrivalAsync(updateArrival, companyID, ArrivalStatus.Pending, transaction);
                 if (!updateResult)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"到货单【{currentArrival.ArrivalCode}】主表修改失败,无法修改到货单");
                 }
                 var deleteResult = await _arrivalRepository.DeleteArrivalDetailsAsync(request.ArrivalID, companyID, transaction);
                 if (!deleteResult) 
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"到货单【{currentArrival.ArrivalCode}】旧明细删除失败,无法修改到货单");
                 }
                 var addResult = await _arrivalRepository.AddArrivalDetailsAsync(arrivalDetails, transaction);
                 if (!addResult)
                 {
-                    transaction.Rollback();
+                    await transaction.RollbackAsync();
                     return ApiResponse<bool>.Error($"到货单【{currentArrival.ArrivalCode}】新明细写入失败,无法修改到货单");
                 }
-                transaction.Commit();
+                await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, "到货单修改成功");
             }
             catch
             {
-                transaction.Rollback();
+                await transaction.RollbackAsync();
                 throw;
             }
         }

@@ -19,7 +19,7 @@
         </el-form>
         <template #footer>
             <el-button @click="CloseDialog">取消</el-button>
-            <el-button type="primary" @click="AddSupplier">确定</el-button>
+            <el-button type="primary" :loading="Submitting" @click="AddSupplier">确定</el-button>
         </template>
     </el-dialog>
 </template>
@@ -37,20 +37,30 @@ const AddSupplierModel = reactive({
     Remark:""
 })
 
+const Submitting = ref(false) // 是否正在提交供应商
 const AddSupplierFormRef = ref(null)
 const emit = defineEmits(['success'])
 const AddSupplier  = async () => {
+    if (Submitting.value) return
+    Submitting.value = true
     try{
-        await AddSupplierFormRef.value.validate()
+        const valid = await AddSupplierFormRef.value.validate().catch(() => false)
+        if(!valid) return
         const res = await AddSupplierApi(AddSupplierModel)
         if(res.code === 200){
             ElMessage.success(res.message)
             emit('success')
             AddSupplierDialogVisible.value=false
         }
+        else {
+            ElMessage.error(res.message)
+            }
     }catch(error){
-        ElMessage.error("新增供应商失败")
+        ElMessage.error("res.message")
         console.log(error)
+    }
+    finally{
+        Submitting.value = false
     }
 }
 
@@ -75,6 +85,4 @@ function ResetForm(){
 </script>
 
 <style>
-
-
 </style>

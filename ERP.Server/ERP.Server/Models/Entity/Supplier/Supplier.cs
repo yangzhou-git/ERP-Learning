@@ -3,6 +3,7 @@
     public class Supplier
     {
         public int SupplierID { get; set; }//供应商ID
+        public string SupplierCode { get; set; } = string.Empty;//供应商编码
         public string SupplierName { get; set; } = string.Empty;//供应商名称
         public string? Contact { get; set; }//联系人
         public string? Phone { get; set; }//电话

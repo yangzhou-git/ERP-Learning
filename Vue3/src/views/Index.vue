@@ -71,6 +71,19 @@
 
                     </el-sub-menu>
 
+                    <!-- 采购管理 -->
+                    <el-sub-menu index="purchase">
+                        <template #title>
+                            <el-icon><ShoppingCart /></el-icon>
+                            <span>采购管理</span>
+                        </template>
+
+                        <el-menu-item index="/index/arrival">
+                            <el-icon><Document /></el-icon>
+                            <span>到货单管理</span>
+                        </el-menu-item>
+                    </el-sub-menu>
+
                     <el-menu-item index="/order">
                         <el-icon><ShoppingCart /></el-icon>
                         <span>订单管理</span>
@@ -100,7 +113,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { House,User,Goods,ShoppingCart,Setting,ArrowDown,Folder,OfficeBuilding,Collection,Shop,Location,ScaleToOriginal } from '@element-plus/icons-vue'
+import { House,User,Goods,ShoppingCart,Setting,ArrowDown,Folder,OfficeBuilding,Collection,Shop,Location,ScaleToOriginal,Document } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const UserName = ref(localStorage.getItem('userName') || '')

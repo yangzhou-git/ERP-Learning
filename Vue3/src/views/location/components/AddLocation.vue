@@ -48,7 +48,7 @@
         </el-form>
         <template #footer>
             <el-button @click="AddLocationDialogVisible = false">取消</el-button>
-            <el-button type="primary" @click="AddLocation">确定</el-button>
+            <el-button type="primary" @click="AddLocation" :loading="Submitting" :disabled="Submitting">确定</el-button>
         </template>
     </el-dialog>
 </template>
@@ -91,10 +91,17 @@ const props = defineProps({
     }
 })
 
+// 是否正在提交新增站点请求
+const Submitting = ref(false)
 const emit = defineEmits(['success'])
 async function AddLocation() {
+    // 1. 防止重复提交
+    if (Submitting.value) return
+     // 2. 标记为提交中
+    Submitting.value = true
     try {
-        await AddLocationFormRef.value.validate()
+        await AddLocationFormRef.value.validate().catch(() => false)
+        if (!valid) return
         const res = await AddLocationApi(AddLocationModel)
         if (res.code === 200) {
             ElMessage.success(res.message)
@@ -105,6 +112,9 @@ async function AddLocation() {
         }
     } catch (e) {
         console.log('新增站点失败：', e)
+    }finally {
+        // 5. 不管成功还是失败，都解除提交状态
+        Submitting.value = false
     }
 }
 
