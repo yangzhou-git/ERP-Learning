@@ -31,21 +31,84 @@
 
     <!-- 操作区域 -->
     <el-button type="primary" @click="OpenAddArrival">新增到货单</el-button>
-
     <!-- 到货单列表区域 -->
     <el-table :data="ArrivalList" border style="width: 100%; margin-top: 15px;">
+        <el-table-column label="到货单号" min-width="160">
+            <template #default="scope">
+                <el-button type="primary" link @click="OpenArrivalDetail(scope.row)">
+                    {{ scope.row.arrivalCode }}
+                </el-button>
+            </template>
+        </el-table-column>
         <el-table-column label="到货状态">
             <template #default="scope">
                 {{ GetArrivalStatusLabel(scope.row.arrivalStatus) }}
             </template>
         </el-table-column>
-        <el-table-column prop="arrivalCode" label="到货单号" />
         <el-table-column prop="supplierName" label="供应商" />
         <el-table-column prop="locationName" label="站点" />
         <el-table-column prop="totalAmount" label="到货金额" />
         <el-table-column prop="arrivalTime" label="到货时间" />
         <el-table-column prop="createUserName" label="创建人" />
         <el-table-column prop="createTime" label="创建时间" />
+        <el-table-column label="操作" width="220" fixed="right" align="center">
+            <template #default="{ row }">
+                <!-- 第一组：审核 / 撤销审核 -->
+                <el-button
+                    v-if="row.arrivalStatus === ArrivalStatus.Pending"
+                    type="success"
+                    link
+                    :loading="OperatingArrivalID === row.arrivalID"
+                    :disabled="OperatingArrivalID !== null"
+                    @click="UpdateArrivalAudit(row)"
+                >
+                    审核
+                </el-button>
+
+                <el-button
+                    v-else
+                    type="warning"
+                    link
+                    :loading="OperatingArrivalID === row.arrivalID"
+                    :disabled="OperatingArrivalID !== null || row.arrivalStatus !== ArrivalStatus.Audited"
+                    @click="CancelArrivalAudit(row)"
+                >
+                    撤销审核
+                </el-button>
+
+                <!-- 第二组：入库 / 撤销入库 -->
+                <el-button
+                    v-if="row.arrivalStatus === ArrivalStatus.Stocked"
+                    type="danger"
+                    link
+                    :loading="OperatingArrivalID === row.arrivalID"
+                    :disabled="OperatingArrivalID !== null"
+                    @click="CancelStockInArrival(row)"
+                >
+                    撤销入库
+                </el-button>
+
+                <el-button
+                    v-else
+                    type="primary"
+                    link
+                    :loading="OperatingArrivalID === row.arrivalID"
+                    :disabled="OperatingArrivalID !== null || row.arrivalStatus !== ArrivalStatus.Audited"
+                    @click="StockInArrival(row)"
+                >
+                    入库
+                </el-button>
+                <el-button
+                    type="primary"
+                    link
+                    :disabled="row.arrivalStatus !== ArrivalStatus.Pending || OperatingArrivalID !== null"
+                    @click="OpenEditArrival(row)"
+                >
+                    编辑
+                </el-button>
+
+            </template>
+        </el-table-column>
     </el-table>
     <!-- 分页区域 -->
     <el-pagination
@@ -57,16 +120,20 @@
         @size-change="HandleSizeChange"
         @current-change="HandleCurrentChange"
     />
-    <AddArrival ref="AddArrivalRef" />
+    <AddArrival ref="AddArrivalRef" @success="HandleArrivalAdded"/>
+    <ArrivalDetail ref="ArrivalDetailDialogRef"/>
+    <EditArrival ref ="EditArrivalRef" @success="GetArrivalList"/>
 </template>
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
-import { GetArrivalListApi } from '../../api/arrival';
-import { ElMessage } from 'element-plus';
-import { ArrivalStatus, ArrivalStatusOptions } from '../../enums/arrivalStatus';
-import { GetLocationListApi } from '../../api/location';
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { GetArrivalListApi, UpdateArrivalAuditApi, StockInArrivalApi, CancelStockInArrivalApi, CancelArrivalAuditApi } from '@/api/arrival'
+import { GetLocationListApi } from '@/api/location'
+import { ArrivalStatus, ArrivalStatusOptions } from '@/enums/arrivalStatus'
 import AddArrival from './components/AddArrival.vue'
+import ArrivalDetail from './components/ArrivalDetail.vue'
+import EditArrival from './components/EditArrival.vue'
 
 onMounted(() => {
     GetArrivalList()
@@ -153,5 +220,206 @@ const GetLocationList = async () => {
 const AddArrivalRef = ref(null)
 function OpenAddArrival() {
     AddArrivalRef.value.OpenDialog()
+}
+
+// 新增到货单成功后刷新列表
+async function HandleArrivalAdded() {
+    // 返回第一页，方便看到新增加的到货单
+    SearchModel.Page = 1
+    // 重新查询到货单列表
+    await GetArrivalList()
+}
+
+const ArrivalDetailDialogRef = ref(null)
+// 打开到货单详情弹窗
+function OpenArrivalDetail(row) {
+    ArrivalDetailDialogRef.value?.OpenArrivalDetailDialog(row.arrivalID)
+}
+
+// 当前正在操作的到货单ID
+const OperatingArrivalID = ref(null)
+
+async function UpdateArrivalAudit(row) {
+    if (OperatingArrivalID.value !== null) {
+        return
+    }
+
+    if (row.arrivalStatus !== ArrivalStatus.Pending) {
+        ElMessage.warning('只有未审核的到货单才能审核')
+        return
+    }
+
+    // 先占用操作锁，避免确认弹窗期间重复点击
+    OperatingArrivalID.value = row.arrivalID
+
+    try {
+        await ElMessageBox.confirm(
+            `确定审核到货单【${row.arrivalCode}】吗？`,
+            '审核到货单',
+            {
+                confirmButtonText: '确定审核',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        const res = await UpdateArrivalAuditApi({
+            ArrivalID: row.arrivalID
+        })
+
+        if (res.code === 200) {
+            ElMessage.success(res.message || '审核到货单成功')
+            await GetArrivalList()
+        } else {
+            ElMessage.error(res.message || '审核到货单失败')
+        }
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            console.error('审核到货单失败：', error)
+            ElMessage.error('审核到货单失败')
+        }
+    } finally {
+        OperatingArrivalID.value = null
+    }
+}
+
+
+ // 撤销审核到货单
+async function CancelArrivalAudit(row) {
+    if (OperatingArrivalID.value !== null) return
+
+    if (row.arrivalStatus !== ArrivalStatus.Audited) {
+        ElMessage.warning('只有已审核且未入库的到货单才能撤销审核')
+        return
+    }
+
+    OperatingArrivalID.value = row.arrivalID
+
+    try {
+        await ElMessageBox.confirm(
+            `确定撤销审核到货单【${row.arrivalCode}】吗？`,
+            '撤销审核',
+            {
+                confirmButtonText: '确定撤销',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        const res = await CancelArrivalAuditApi({
+            ArrivalID: row.arrivalID
+        })
+
+        if (res.code === 200) {
+            ElMessage.success(res.message || '撤销审核成功')
+            await GetArrivalList()
+        } else {
+            ElMessage.error(res.message || '撤销审核失败')
+        }
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            console.error('撤销审核失败：', error)
+            ElMessage.error('撤销审核失败，请稍后重试')
+        }
+    } finally {
+        OperatingArrivalID.value = null
+    }
+}
+
+// 到货单入库
+async function StockInArrival(row) {
+    if (OperatingArrivalID.value !== null) return
+
+    if (row.arrivalStatus !== ArrivalStatus.Audited) {
+        ElMessage.warning('只有已审核的到货单才能入库')
+        return
+    }
+
+    OperatingArrivalID.value = row.arrivalID
+
+    try {
+        await ElMessageBox.confirm(
+            `确定将到货单【${row.arrivalCode}】入库吗？入库后将更新实际库存。`,
+            '到货单入库',
+            {
+                confirmButtonText: '确定入库',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        const res = await StockInArrivalApi({
+            ArrivalID: row.arrivalID
+        })
+
+        if (res.code === 200) {
+            ElMessage.success(res.message || '到货单入库成功')
+            await GetArrivalList()
+        } else {
+            ElMessage.error(res.message || '到货单入库失败')
+        }
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            console.error('到货单入库失败：', error)
+            ElMessage.error('到货单入库失败，请稍后重试')
+        }
+    } finally {
+        OperatingArrivalID.value = null
+    }
+}
+
+// 撤销到货单入库
+async function CancelStockInArrival(row) {
+    if (OperatingArrivalID.value !== null) return
+
+    if (row.arrivalStatus !== ArrivalStatus.Stocked) {
+        ElMessage.warning('只有已入库的到货单才能撤销入库')
+        return
+    }
+
+    OperatingArrivalID.value = row.arrivalID
+
+    try {
+        await ElMessageBox.confirm(
+            `确定撤销到货单【${row.arrivalCode}】的入库吗？此操作将调整实际库存及库存流水。`,
+            '撤销到货入库',
+            {
+                confirmButtonText: '确定撤销',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        const res = await CancelStockInArrivalApi({
+            ArrivalID: row.arrivalID
+        })
+
+        if (res.code === 200) {
+            ElMessage.success(res.message || '撤销入库成功')
+            await GetArrivalList()
+        } else {
+            ElMessage.error(res.message || '撤销入库失败')
+        }
+    } catch (error) {
+        if (error !== 'cancel' && error !== 'close') {
+            console.error('撤销入库失败：', error)
+            ElMessage.error('撤销入库失败，请稍后重试')
+        }
+    } finally {
+        OperatingArrivalID.value = null
+    }
+}
+
+// 编辑到货单组件引用
+const EditArrivalRef = ref(null)
+// 打开编辑到货单弹窗
+function OpenEditArrival(row) {
+    // 只有未审核的到货单允许编辑
+    if (row.arrivalStatus !== ArrivalStatus.Pending) {
+        ElMessage.warning('只有未审核的到货单才能编辑')
+        return
+    }
+    // 打开编辑弹窗，传递到货单ID
+    EditArrivalRef.value?.OpenDialog(row.arrivalID)
 }
 </script>

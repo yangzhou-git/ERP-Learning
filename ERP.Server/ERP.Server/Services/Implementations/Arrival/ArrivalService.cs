@@ -707,6 +707,11 @@ namespace ERP.Server.Services.Implementations
                         }
                     }
                 }
+                var updateArrivalResult = await _arrivalRepository.UpdateArrivalCancelStockInAsync(arrival.ArrivalID, companyID, _currentUserService.UserID, ArrivalStatus.Stocked, ArrivalStatus.Audited, transaction);
+                if (!updateArrivalResult)
+                {
+                    return ApiResponse<bool>.Error($"到货单【{arrival.ArrivalCode}】状态更新失败,无法撤销入库");
+                }
                 await transaction.CommitAsync();
                 return ApiResponse<bool>.Success(true, $"到货单【{arrival.ArrivalCode}】撤销入库成功");
             }

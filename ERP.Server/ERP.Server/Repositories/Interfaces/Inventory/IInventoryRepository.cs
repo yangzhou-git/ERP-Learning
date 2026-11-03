@@ -1,7 +1,10 @@
 ﻿using System.Data;
+using ERP.Server.Common;
 using ERP.Server.Models.Entity.Inventory;
 using ERP.Server.Models.Entity.InventoryTransaction;
 using ERP.Server.Models.Enums;
+using ERP.Server.Models.Request.Inventory;
+using ERP.Server.Models.Response.Inventory;
 
 namespace ERP.Server.Repositories.Interfaces
 {
@@ -27,6 +30,12 @@ namespace ERP.Server.Repositories.Interfaces
         #endregion
         #region 根据库存流水ID查询原始库存流水GetInventoryTransactionByIDAsync
         Task<InventoryTransaction?> GetInventoryTransactionByIDAsync(int inventoryTransactionID, int companyID, IDbTransaction transaction);
+        #endregion
+        #region 查询库存汇总分页列表 GetInventorySummaryListAsync
+        Task<PageResponse<InventorySummaryResponse>> GetInventorySummaryListAsync(GetInventorySummaryListRequest request,int companyID);
+        #endregion
+        #region 查询库存供应商明细分页列表 GetInventoryDetailListAsync
+        Task<PageResponse<InventoryDetailResponse>> GetInventoryDetailListAsync(GetInventoryDetailListRequest request, int companyID);
         #endregion
     }
 }

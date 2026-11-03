@@ -1,8 +1,11 @@
 ﻿using System.Data;
 using Dapper;
+using ERP.Server.Common;
 using ERP.Server.Models.Entity.Inventory;
 using ERP.Server.Models.Entity.InventoryTransaction;
 using ERP.Server.Models.Enums;
+using ERP.Server.Models.Request.Inventory;
+using ERP.Server.Models.Response.Inventory;
 using ERP.Server.Repositories.Interfaces;
 
 namespace ERP.Server.Repositories.Implementations
@@ -155,6 +158,86 @@ namespace ERP.Server.Repositories.Implementations
         {
             var sql = @"select * from InventoryTransaction where InventoryTransactionID = @inventoryTransactionID and CompanyID = @companyID";
             return await _dbConnection.QueryFirstOrDefaultAsync<InventoryTransaction>(sql, new { inventoryTransactionID, companyID }, transaction);
+        }
+        #endregion
+
+        #region 查询库存汇总分页列表 GetInventorySummaryListAsync
+        public async Task<PageResponse<InventorySummaryResponse>> GetInventorySummaryListAsync(GetInventorySummaryListRequest request, int companyID)
+        {
+            var skip = (request.Page - 1) * request.PageSize;
+            // 库存汇总：按公司 + 站点 + 商品汇总所有供应商库存
+            var sql = @"SELECT i.GoodsID, g.GoodsTitle, i.LocationID, l.LocationName,
+                        SUM(i.Quantity) AS Quantity,
+                        SUM(i.InventoryAmount) AS TotalAmount,
+                        u.UnitName
+                        FROM Inventory i
+                        JOIN Goods g ON i.GoodsID = g.GoodsID
+                        JOIN Location l ON i.LocationID = l.LocationID
+                        JOIN GoodsUnit gu ON i.GoodsID = gu.GoodsID
+                        AND gu.IsBaseUnit = 1
+                        JOIN Unit u ON gu.UnitID = u.UnitID
+                        WHERE i.CompanyID = @companyID
+                        AND (@LocationID IS NULL OR i.LocationID = @LocationID)
+                        AND (@GoodsTitle IS NULL OR @GoodsTitle = '' OR g.GoodsTitle LIKE '%' + @GoodsTitle + '%')
+                        GROUP BY i.GoodsID, g.GoodsTitle, i.LocationID, l.LocationName, u.UnitName
+                        ORDER BY i.LocationID, i.GoodsID
+                        OFFSET @Skip ROWS
+                        FETCH NEXT @PageSize ROWS ONLY";
+
+            // 查询汇总后的总记录数（每个站点 + 商品算一条）
+            var countSql = @"SELECT COUNT(*) FROM
+                            (SELECT i.GoodsID, i.LocationID
+                            FROM Inventory i
+                            JOIN Goods g ON i.GoodsID = g.GoodsID
+                            JOIN Location l ON i.LocationID = l.LocationID
+                            JOIN GoodsUnit gu ON i.GoodsID = gu.GoodsID AND gu.IsBaseUnit = 1
+                            JOIN Unit u ON gu.UnitID = u.UnitID
+                            WHERE i.CompanyID = @companyID
+                            AND (@LocationID IS NULL OR i.LocationID = @LocationID)
+                            AND (@GoodsTitle IS NULL OR @GoodsTitle = '' OR g.GoodsTitle LIKE '%' + @GoodsTitle + '%')
+                            GROUP BY i.GoodsID, i.LocationID ) AS InventorySummaryCount";
+
+            var parameters = new
+            {
+                companyID,
+                LocationID = request.LocationID,
+                GoodsTitle = request.GoodsTitle,
+                Skip = skip,
+                PageSize = request.PageSize
+            };
+            var result = await _dbConnection.QueryAsync<InventorySummaryResponse>(sql, parameters);
+            var total = await _dbConnection.ExecuteScalarAsync<int>(countSql, parameters);
+            return new PageResponse<InventorySummaryResponse>
+            {
+                List = result.ToList(),
+                TotalCount = total
+            };
+        }
+        #endregion
+
+        #region 查询库存供应商明细分页列表 GetInventoryDetailListAsync
+        public async Task<PageResponse<InventoryDetailResponse>> GetInventoryDetailListAsync(GetInventoryDetailListRequest request, int companyID)
+        {
+            var skip = (request.Page - 1) * request.PageSize;
+            var sql = @"select i.InventoryID, s.SupplierID, s.SupplierName, g.GoodsTitle, i.Quantity, i.InventoryAmount, i.AverageCost 
+                        from Inventory i
+                        join Supplier s on i.SupplierID = s.SupplierID
+                        join Goods g on i.GoodsID = g.GoodsID
+                        where i.CompanyID = @companyID
+                        and i.LocationID = @LocationID
+                        and i.GoodsID = @GoodsID
+                        order by i.InventoryID
+                        offset @skip rows
+                        fetch next @PageSize rows only";
+            var countsql = @"select count(*) from Inventory i
+                            join Supplier s on i.SupplierID = s.SupplierID
+                            join Goods g on i.GoodsID = g.GoodsID
+                            where i.CompanyID = @companyID
+                            and i.LocationID = @LocationID
+                            and i.GoodsID = @GoodsID";
+            var result = (await _dbConnection.QueryAsync<InventoryDetailResponse>(sql, new { companyID, LocationID = request.LocationID, GoodsID = request.GoodsID, Skip = skip, PageSize = request.PageSize })).ToList();
+            var total = await _dbConnection.ExecuteScalarAsync<int>(countsql, new { companyID, LocationID = request.LocationID, GoodsID = request.GoodsID });
+            return new PageResponse<InventoryDetailResponse>{ List = result, TotalCount = total };
         }
         #endregion
     }

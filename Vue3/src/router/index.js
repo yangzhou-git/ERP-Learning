@@ -14,7 +14,8 @@ const routes = [
       { path:'goodscategory', name:'GoodsCategoryList', component:() => import('../views/goodscategory/GoodsCategoryList.vue')},
       { path:'location', name:'Location', component:() => import('../views/location/LocationList.vue')},
       { path:'unit', name:'Unit', component:() => import('../views/unit/UnitList.vue')},
-      { path:'arrival', name:'ArrivalList', component:() => import('../views/arrival/ArrivalList.vue')}
+      { path:'arrival', name:'ArrivalList', component:() => import('../views/arrival/ArrivalList.vue')},
+      { path: 'inventory', name: 'InventoryList', component: () => import('../views/inventory/InventoryList.vue')}
     ]
   }
 ]

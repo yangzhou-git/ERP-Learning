@@ -305,6 +305,9 @@ namespace ERP.Server.Repositories.Implementations
             var skip = (request.Page - 1) * request.PageSize;
 
             var sql = @"select
+                        ad.ArrivalDetailID,
+                        ad.GoodsID,
+                        ad.GoodsUnitID,
                         ad.BarCode,
                         ad.GoodsCode,
                         ad.GoodsTitle,
@@ -314,6 +317,7 @@ namespace ERP.Server.Repositories.Implementations
                         ad.Quantity,
                         ad.BaseQuantity,
                         g.GoodsPrice,
+                        ad.PurchaseUnitCost,
                         ad.UnitCost,
                         ad.Amount,
                         isnull(i.Quantity, 0) as CurrentInventory,
@@ -325,6 +329,7 @@ namespace ERP.Server.Repositories.Implementations
                         on i.CompanyID = @companyID
                         and i.LocationID = @locationID
                         and i.GoodsID = ad.GoodsID
+                        and i.SupplierID = a.SupplierID
                     where ad.ArrivalID = @ArrivalID
                         and a.CompanyID = @companyID
                     order by ad.ArrivalDetailID

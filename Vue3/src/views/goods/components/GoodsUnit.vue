@@ -52,8 +52,8 @@
             @current-change="HandleCurrentChange"
         />
     </el-dialog>
-    <AddGoodsUnit ref="AddGoodsUnitRef" @success="GetGoodsUnitList"></AddGoodsUnit>
-    <EditGoodsUnit ref="EditGoodsUnitRef" @success="GetGoodsUnitList"></EditGoodsUnit>
+    <AddGoodsUnit ref="AddGoodsUnitRef" @success="HandleGoodsUnitSaved"></AddGoodsUnit>
+    <EditGoodsUnit ref="EditGoodsUnitRef" @success="HandleGoodsUnitSaved"/>
 </template>
 
 <script setup>
@@ -126,7 +126,7 @@ async function ChangeGoodsUnitStatus(row) {
        const res = await UpdateGoodsUnitStatusApi(data)
        if (res.code === 200) {
             ElMessage.success(res.message)
-            GetGoodsUnitList()
+             await HandleGoodsUnitSaved()
         } else {
             row.isActive = !row.isActive
             ElMessage.error(res.message)
@@ -157,6 +157,17 @@ function HandleSizeChange(pageSize) {
 function HandleCurrentChange(page) {
     SearchModel.Page = page
     GetGoodsUnitList()
+}
+
+const emit = defineEmits(['success'])
+
+// 商品单位新增或修改成功
+async function HandleGoodsUnitSaved() {
+    // 刷新商品单位维护列表
+    await GetGoodsUnitList()
+
+    // 通知外层组件刷新该商品的单位选项
+    emit('success', SearchModel.GoodsID)
 }
 </script>
 
