@@ -29,9 +29,10 @@ namespace ERP.Server.Controllers
 
         #region 查询到货单列表GetArrivalList
         [HttpGet]
-        public async Task<ApiResponse<PageResponse<ArrivalListResponse>>> GetArrivalList([FromQuery] GetArrivalListRequest request)
+        public async Task<IActionResult> GetArrivalList([FromQuery] GetArrivalListRequest request)
         {
-            return await _arrivalService.GetArrivalListAsync(request);
+            var result = await _arrivalService.GetArrivalListAsync(request);
+            return StatusCode(result.Code, result);
         }
         #endregion
 

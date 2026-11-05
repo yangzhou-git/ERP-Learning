@@ -404,7 +404,7 @@ namespace ERP.Server.Repositories.Implementations
                 targetStatus,
                 companyID,
                 currentStatus
-            }, transaction) > 0;
+            }, transaction) == 1;
         }
         #endregion
 

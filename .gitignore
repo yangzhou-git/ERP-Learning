@@ -17,3 +17,6 @@ DockerData/
 
 # Redis 本地配置（包含密码）
 DockerConfig/
+
+# 忽略所有项目中的 logs 目录
+**/logs/

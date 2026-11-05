@@ -26,7 +26,7 @@ namespace ERP.Server.Filters
                 var result = await validator.ValidateAsync(validationContext);
                 if (!result.IsValid)
                 {
-                    context.Result = new BadRequestObjectResult(ApiResponse<bool>.Error(result.Errors[0].ErrorMessage));
+                    context.Result = new BadRequestObjectResult(ApiResponse<bool>.BadRequest(result.Errors[0].ErrorMessage));
                     return;
                 }
             }
